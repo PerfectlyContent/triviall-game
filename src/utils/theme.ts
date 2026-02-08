@@ -1,0 +1,78 @@
+import type { Subject } from '../types';
+
+export const theme = {
+  colors: {
+    primaryTeal: '#00D4C8',
+    coralPink: '#FF6B8A',
+    brightYellow: '#FFD93D',
+    mintGreen: '#00D9A5',
+    purple: '#8B5CF6',
+    orange: '#FF9F43',
+    white: '#FFFFFF',
+    darkText: '#1A1A2E',
+    lightGray: '#F0F0F5',
+    mediumGray: '#B0B0C0',
+    error: '#FF4757',
+    success: '#2ED573',
+  },
+  fonts: {
+    display: "'Poppins', sans-serif",
+    body: "'Nunito', sans-serif",
+  },
+  gradients: {
+    purple: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    teal: 'linear-gradient(135deg, #00D4C8 0%, #00B4D8 100%)',
+    coral: 'linear-gradient(135deg, #FF6B8A 0%, #FF8E53 100%)',
+    yellow: 'linear-gradient(135deg, #FFE566 0%, #FFD93D 100%)',
+    green: 'linear-gradient(135deg, #00F5BC 0%, #00D9A5 100%)',
+    pink: 'linear-gradient(135deg, #FF8FA8 0%, #FF6B8A 100%)',
+  },
+  subjectGradients: {
+    Science: 'linear-gradient(135deg, #00D4C8 0%, #00B4D8 100%)',
+    History: 'linear-gradient(135deg, #FF9F43 0%, #ee5a24 100%)',
+    Gaming: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    Movies: 'linear-gradient(135deg, #8B5CF6 0%, #a855f7 100%)',
+    Music: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+    Sports: 'linear-gradient(135deg, #FF9F43 0%, #FFD93D 100%)',
+    Nature: 'linear-gradient(135deg, #00D9A5 0%, #38f9d7 100%)',
+    Food: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+    Travel: 'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+    'Pop Culture': 'linear-gradient(135deg, #f78ca0 0%, #f9748f 100%)',
+    Art: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
+    Tech: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+  } as Record<Subject, string>,
+  subjectEmojis: {
+    Science: '🔬',
+    History: '📜',
+    Gaming: '🎮',
+    Movies: '🎬',
+    Music: '🎵',
+    Sports: '⚽',
+    Nature: '🌿',
+    Food: '🍕',
+    Travel: '✈️',
+    'Pop Culture': '⭐',
+    Art: '🎨',
+    Tech: '💻',
+  } as Record<Subject, string>,
+  shadows: {
+    button: '0 4px 15px rgba(0,0,0,0.2)',
+    card: '0 8px 32px rgba(0,0,0,0.15)',
+    cardHover: '0 12px 40px rgba(0,0,0,0.2)',
+    glow: (color: string) => `0 0 20px ${color}40, 0 0 40px ${color}20`,
+  },
+  borderRadius: {
+    sm: '8px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px',
+    full: '9999px',
+  },
+} as const;
+
+export const AVATAR_EMOJIS = [
+  '😀', '😎', '🤩', '🥳', '😜', '🤓',
+  '🦊', '🐱', '🐶', '🦁', '🐼', '🦄',
+  '🚀', '⚡', '🌟', '🎯', '🎪', '🎭',
+  '🌈', '🔥', '💎', '🎮', '🎸', '🏆',
+];
