@@ -31,8 +31,6 @@ export function Round() {
   const answerTimeRef = useRef<number>(0);
 
   const currentPlayer = actions.getCurrentPlayer();
-  const totalTurnsPerRound = game.players.length;
-  const currentTurnInRound = (game.currentPlayerTurnIndex % totalTurnsPerRound) + 1;
 
   // Load question when entering loading phase
   useEffect(() => {

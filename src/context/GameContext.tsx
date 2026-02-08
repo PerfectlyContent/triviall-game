@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import type { Player, Question, GameState, GameSettings, GameStatus, RoundResult, Subject, AgeGroup } from '../types';
+import type { Player, Question, GameState, GameSettings, GameStatus, RoundResult, AgeGroup } from '../types';
 import { createDefaultGameState, createDefaultPlayer } from '../types';
 import { calculatePoints, adjustDifficulty } from '../utils/scoring';
 import { generateQuestion, getFallbackQuestion } from '../services/gemini';

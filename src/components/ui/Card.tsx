@@ -10,18 +10,29 @@ interface CardProps {
 }
 
 export function Card({ children, padding = '24px', animate = true, style, onClick }: CardProps) {
-  const Component = animate ? motion.div : 'div';
-  const animateProps = animate
-    ? {
-        initial: { opacity: 0, y: 20 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.4, ease: 'easeOut' },
-      }
-    : {};
+  if (!animate) {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          background: theme.colors.white,
+          borderRadius: theme.borderRadius.lg,
+          padding,
+          boxShadow: theme.shadows.card,
+          cursor: onClick ? 'pointer' : 'default',
+          ...style,
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <Component
-      {...animateProps}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' as const }}
       onClick={onClick}
       style={{
         background: theme.colors.white,
@@ -33,7 +44,7 @@ export function Card({ children, padding = '24px', animate = true, style, onClic
       }}
     >
       {children}
-    </Component>
+    </motion.div>
   );
 }
 
