@@ -197,7 +197,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { stateRef.current = state; }, [state]);
 
   // Ref for loadQuestion so the broadcast handler can call it without circular deps
-  const loadQuestionRef = useRef<() => Promise<void>>();
+  const loadQuestionRef = useRef<() => Promise<void>>(undefined);
 
   const amIHost = useCallback(() => {
     return state.myPlayerId === state.game.hostId;
