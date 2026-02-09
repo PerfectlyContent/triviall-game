@@ -22,7 +22,8 @@ type GameAction =
   | { type: 'NEXT_TURN' }
   | { type: 'SET_ROUND'; payload: number }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_MY_PLAYER_ID'; payload: string };
 
 interface ContextState {
   game: GameState;
@@ -124,6 +125,9 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
+
+    case 'SET_MY_PLAYER_ID':
+      return { ...state, myPlayerId: action.payload };
 
     default:
       return state;
@@ -248,10 +252,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Store my player ID
-    (state as unknown as { myPlayerId: string }).myPlayerId = playerId;
+    // Store my player ID properly via dispatch
+    dispatch({ type: 'SET_MY_PLAYER_ID', payload: playerId });
     return playerId;
-  }, [state]);
+  }, []);
 
   const joinGame = useCallback(async (
     roomCode: string,
@@ -297,7 +301,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       };
 
       dispatch({ type: 'SET_GAME', payload: gameState });
-      (state as unknown as { myPlayerId: string }).myPlayerId = dbPlayer.id;
+      dispatch({ type: 'SET_MY_PLAYER_ID', payload: dbPlayer.id });
 
       // Subscribe to realtime
       channelRef.current = db.subscribeToGame(roomCode, game.id, {
@@ -349,7 +353,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [state]);
+  }, []);
 
   const addLocalPlayer = useCallback((playerData: { name: string; age: AgeGroup; avatarEmoji: string }) => {
     const player = createDefaultPlayer({
