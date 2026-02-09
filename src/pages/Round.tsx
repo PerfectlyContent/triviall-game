@@ -37,10 +37,6 @@ export function Round() {
   const isOnline = game.settings.mode === 'online';
   const isMyTurn = !isOnline || (currentPlayer && state.myPlayerId === currentPlayer.id);
 
-  // === DIAGNOSTIC LOGGING (remove after debugging) ===
-  const myLabel = state.myPlayerId === game.hostId ? 'HOST' : 'JOINER';
-  console.log(`[${myLabel}] RENDER phase=${phase} turnIdx=${game.currentPlayerTurnIndex} round=${game.currentRound} isMyTurn=${isMyTurn} qId=${game.currentQuestion?.id?.slice(-4) ?? 'null'} iAnswered=${iAnsweredRef.current} results=${game.roundResults.length}`);
-
   // Track question ID to detect new questions arriving (the ONE watcher for online mode)
   const prevQuestionIdRef = useRef<string | null>(null);
 
@@ -89,7 +85,6 @@ export function Round() {
 
     // Only transition when we see a NEW question (different ID)
     if (game.currentQuestion.id !== prevQuestionIdRef.current) {
-      console.log(`[${myLabel}] NEW QUESTION detected: ${game.currentQuestion.id.slice(-4)} (prev: ${prevQuestionIdRef.current?.slice(-4) ?? 'null'}) phase=${phase}`);
       prevQuestionIdRef.current = game.currentQuestion.id;
       iAnsweredRef.current = false; // Reset for new question
 
@@ -135,7 +130,6 @@ export function Round() {
   useEffect(() => {
     if (!isOnline) return;
     if (game.roundResults.length > prevResultCountRef.current) {
-      console.log(`[${myLabel}] RESULT WATCHER: results ${prevResultCountRef.current}->${game.roundResults.length} isMyTurn=${isMyTurn} phase=${phase}`);
       prevResultCountRef.current = game.roundResults.length;
       // If I wasn't the one answering, show me the result
       if (!isMyTurn && (phase === 'question' || phase === 'loading' || phase === 'turn-intro')) {
@@ -161,7 +155,6 @@ export function Round() {
     if (selectedAnswer || phase !== 'question' || !isMyTurn) return;
 
     iAnsweredRef.current = true; // Mark that THIS client answered
-    console.log(`[${myLabel}] ANSWERED: setting iAnsweredRef=true`);
     const timeElapsed = (Date.now() - answerTimeRef.current) / 1000;
     setSelectedAnswer(answer);
     setTimerRunning(false);
@@ -191,7 +184,6 @@ export function Round() {
     if (!isMyTurn) return; // only the answering player handles timeout
 
     iAnsweredRef.current = true; // Mark that THIS client answered (timeout)
-    console.log(`[${myLabel}] TIMEOUT: setting iAnsweredRef=true`);
     setTimerRunning(false);
     setSelectedAnswer('__timeout__');
 
@@ -208,15 +200,9 @@ export function Round() {
   useEffect(() => {
     if (!isOnline) return;
     if (phase !== 'result') return;
-    console.log(`[${myLabel}] AUTO-ADVANCE CHECK: phase=${phase} iAnswered=${iAnsweredRef.current} isMyTurn=${isMyTurn}`);
-    if (!iAnsweredRef.current) {
-      console.log(`[${myLabel}] AUTO-ADVANCE BLOCKED: iAnswered=false (I did NOT answer this question)`);
-      return;
-    }
+    if (!iAnsweredRef.current) return; // only the player who actually answered auto-advances
 
-    console.log(`[${myLabel}] AUTO-ADVANCE ARMED: will fire in ${RESULT_DISPLAY_MS}ms`);
     const timer = setTimeout(() => {
-      console.log(`[${myLabel}] AUTO-ADVANCE FIRING: isGameOver=${actions.isGameOver()}`);
       if (actions.isGameOver()) {
         actions.endGame();
         navigate('/results');
