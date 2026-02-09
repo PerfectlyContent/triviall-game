@@ -171,7 +171,7 @@ interface GameContextValue {
     updateSettings: (settings: Partial<GameSettings>) => void;
     setReady: (ready: boolean) => void;
     startGame: () => void;
-    loadQuestion: () => Promise<void>;
+    loadQuestion: (overrides?: { turnIndex: number; round: number }) => Promise<void>;
     submitAnswer: (answer: string, timeElapsed: number) => { isCorrect: boolean; points: number; multiplier: number; correctAnswer: string; explanation: string };
     nextTurn: () => void;
     endGame: () => void;
@@ -197,7 +197,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { stateRef.current = state; }, [state]);
 
   // Ref for loadQuestion so the broadcast handler can call it without circular deps
-  const loadQuestionRef = useRef<() => Promise<void>>(undefined);
+  const loadQuestionRef = useRef<(overrides?: { turnIndex: number; round: number }) => Promise<void>>(undefined);
 
   const amIHost = useCallback(() => {
     return state.myPlayerId === state.game.hostId;
@@ -285,22 +285,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           break;
         }
 
-        case 'advance_turn':
+        case 'advance_turn': {
+          const nextTurnIndex = payload.nextTurnIndex as number;
+          const nextRound = payload.nextRound as number;
           dispatch({
             type: 'PREPARE_NEXT_TURN',
-            payload: {
-              turnIndex: payload.nextTurnIndex as number,
-              round: payload.nextRound as number,
-            },
+            payload: { turnIndex: nextTurnIndex, round: nextRound },
           });
-          // If I'm the host, I need to generate the next question
+          // If I'm the host, generate the next question — pass turn info explicitly
+          // (stateRef may not have flushed the PREPARE_NEXT_TURN dispatch yet)
           if (s.myPlayerId === s.game.hostId) {
-            // Small delay to let state update flush before generating question
             setTimeout(() => {
-              loadQuestionRef.current?.();
+              loadQuestionRef.current?.({ turnIndex: nextTurnIndex, round: nextRound });
             }, 100);
           }
           break;
+        }
 
         case 'game_over':
           dispatch({ type: 'SET_STATUS', payload: 'finished' });
@@ -510,14 +510,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       // Host generates the first question immediately
       setTimeout(() => {
-        loadQuestionRef.current?.();
+        loadQuestionRef.current?.({ turnIndex: 0, round: 1 });
       }, 100);
     }
   }, []);
 
   // loadQuestion: ONLY the host generates questions in online mode.
   // Non-host clients receive questions via the 'question' broadcast.
-  const loadQuestion = useCallback(async () => {
+  // `overrides` allows callers to pass the correct turnIndex/round explicitly,
+  // avoiding stale stateRef reads after dispatches haven't flushed yet.
+  const loadQuestion = useCallback(async (overrides?: { turnIndex: number; round: number }) => {
     const s = stateRef.current;
     const isOnline = s.game.settings.mode === 'online';
     const iAmHost = s.myPlayerId === s.game.hostId;
@@ -528,8 +530,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Use overrides if provided (avoids stale stateRef after PREPARE_NEXT_TURN dispatch)
+    const turnIndex = overrides?.turnIndex ?? s.game.currentPlayerTurnIndex;
+    const round = overrides?.round ?? s.game.currentRound;
+
     dispatch({ type: 'SET_LOADING', payload: true });
-    const currentPlayer = s.game.players[s.game.currentPlayerTurnIndex];
+    const currentPlayer = s.game.players[turnIndex];
     if (!currentPlayer) return;
 
     const subjects = s.game.settings.subjects;
@@ -557,12 +563,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       db.broadcastGameEvent(channelRef.current, 'question', {
         senderId: s.myPlayerId,
         question,
-        turnIndex: s.game.currentPlayerTurnIndex,
-        round: s.game.currentRound,
+        turnIndex,
+        round,
       });
-      // DB write (persistence only, fire-and-forget — ok if schema doesn't have this column)
+      // DB write (persistence only, fire-and-forget)
       db.updateGame(s.game.id, {
-        current_round: s.game.currentRound,
+        current_round: round,
       }).catch(() => {});
     }
   }, []);
@@ -660,10 +666,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         current_round: nextRound,
       }).catch(() => {});
 
-      // If I'm the host, generate the next question
+      // If I'm the host, generate the next question — pass turn info explicitly
       if (s.myPlayerId === s.game.hostId) {
         setTimeout(() => {
-          loadQuestionRef.current?.();
+          loadQuestionRef.current?.({ turnIndex: nextIndex, round: nextRound });
         }, 100);
       }
     } else {
