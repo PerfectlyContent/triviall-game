@@ -206,7 +206,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
 
         // Subscribe to realtime
-        channelRef.current = db.subscribeToGame(roomCode, {
+        channelRef.current = db.subscribeToGame(roomCode, dbGame.id, {
           onGameUpdate: (payload) => {
             if (payload.status) dispatch({ type: 'SET_STATUS', payload: payload.status as GameStatus });
             if (payload.current_question) dispatch({ type: 'SET_QUESTION', payload: payload.current_question as unknown as Question });
@@ -294,7 +294,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       (state as unknown as { myPlayerId: string }).myPlayerId = dbPlayer.id;
 
       // Subscribe to realtime
-      channelRef.current = db.subscribeToGame(roomCode, {
+      channelRef.current = db.subscribeToGame(roomCode, game.id, {
         onGameUpdate: (payload) => {
           if (payload.status) dispatch({ type: 'SET_STATUS', payload: payload.status as GameStatus });
           if (payload.current_question) dispatch({ type: 'SET_QUESTION', payload: payload.current_question as unknown as Question });

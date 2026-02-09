@@ -92,6 +92,7 @@ export async function getPlayersForGame(gameId: string) {
 // --- Realtime ---
 export function subscribeToGame(
   roomCode: string,
+  gameId: string,
   callbacks: {
     onGameUpdate: (payload: Record<string, unknown>) => void;
     onPlayerJoin: (payload: Record<string, unknown>) => void;
@@ -111,12 +112,12 @@ export function subscribeToGame(
     )
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'players' },
+      { event: 'INSERT', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` },
       (payload) => callbacks.onPlayerJoin(payload.new as Record<string, unknown>),
     )
     .on(
       'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'players' },
+      { event: 'UPDATE', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` },
       (payload) => callbacks.onPlayerUpdate(payload.new as Record<string, unknown>),
     )
     .on('broadcast', { event: 'game_event' }, (payload) => {
