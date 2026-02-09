@@ -288,13 +288,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         case 'advance_turn': {
           const nextTurnIndex = payload.nextTurnIndex as number;
           const nextRound = payload.nextRound as number;
+          const amHost = s.myPlayerId === s.game.hostId;
+          console.log(`[Broadcast] advance_turn: nextTurn=${nextTurnIndex} nextRound=${nextRound} amHost=${amHost}`);
           dispatch({
             type: 'PREPARE_NEXT_TURN',
             payload: { turnIndex: nextTurnIndex, round: nextRound },
           });
           // If I'm the host, generate the next question — pass turn info explicitly
           // (stateRef may not have flushed the PREPARE_NEXT_TURN dispatch yet)
-          if (s.myPlayerId === s.game.hostId) {
+          if (amHost) {
+            console.log(`[Broadcast] advance_turn: HOST will generate question in 100ms`);
             setTimeout(() => {
               loadQuestionRef.current?.({ turnIndex: nextTurnIndex, round: nextRound });
             }, 100);
@@ -523,6 +526,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const s = stateRef.current;
     const isOnline = s.game.settings.mode === 'online';
     const iAmHost = s.myPlayerId === s.game.hostId;
+    console.log(`[loadQuestion] called: isOnline=${isOnline} iAmHost=${iAmHost} overrides=${JSON.stringify(overrides)} stateTurn=${s.game.currentPlayerTurnIndex} stateRound=${s.game.currentRound}`);
 
     // In online mode, only host generates questions
     if (isOnline && !iAmHost) {
@@ -648,6 +652,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const nextIndex = (s.game.currentPlayerTurnIndex + 1) % s.game.players.length;
     const isNewRound = nextIndex === 0;
     const nextRound = isNewRound ? s.game.currentRound + 1 : s.game.currentRound;
+    const amHost = s.myPlayerId === s.game.hostId;
+    console.log(`[nextTurn] called by ${amHost ? 'HOST' : 'JOINER'}: currentTurn=${s.game.currentPlayerTurnIndex} -> nextTurn=${nextIndex} round=${nextRound}`);
 
     if (s.game.settings.mode === 'online') {
       // Dispatch locally: prepare for next turn (question = null while host generates)
