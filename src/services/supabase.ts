@@ -108,17 +108,26 @@ export function subscribeToGame(
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'games', filter: `room_code=eq.${roomCode}` },
-      (payload) => callbacks.onGameUpdate(payload.new as Record<string, unknown>),
+      (payload) => {
+        console.log('[Realtime] Game update:', payload.new);
+        callbacks.onGameUpdate(payload.new as Record<string, unknown>);
+      },
     )
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` },
-      (payload) => callbacks.onPlayerJoin(payload.new as Record<string, unknown>),
+      (payload) => {
+        console.log('[Realtime] Player joined:', payload.new);
+        callbacks.onPlayerJoin(payload.new as Record<string, unknown>);
+      },
     )
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` },
-      (payload) => callbacks.onPlayerUpdate(payload.new as Record<string, unknown>),
+      (payload) => {
+        console.log('[Realtime] Player update:', payload.new);
+        callbacks.onPlayerUpdate(payload.new as Record<string, unknown>);
+      },
     )
     .on('broadcast', { event: 'game_event' }, (payload) => {
       callbacks.onBroadcast(
@@ -126,7 +135,13 @@ export function subscribeToGame(
         payload.payload as Record<string, unknown>,
       );
     })
-    .subscribe();
+    .on('broadcast', { event: 'player_joined' }, (payload) => {
+      console.log('[Realtime] Broadcast player joined:', payload.payload);
+      callbacks.onPlayerJoin(payload.payload as Record<string, unknown>);
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] Subscription status:', status);
+    });
 
   return channel;
 }
@@ -140,5 +155,17 @@ export function broadcastGameEvent(
     type: 'broadcast',
     event: 'game_event',
     payload: { type, ...payload },
+  });
+}
+
+// Broadcast when a player joins (for immediate sync)
+export function broadcastPlayerJoined(
+  channel: RealtimeChannel,
+  player: Record<string, unknown>,
+) {
+  channel.send({
+    type: 'broadcast',
+    event: 'player_joined',
+    payload: player,
   });
 }

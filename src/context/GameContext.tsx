@@ -39,11 +39,17 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
     case 'SET_GAME':
       return { ...state, game: action.payload };
 
-    case 'ADD_PLAYER':
+    case 'ADD_PLAYER': {
+      // Prevent duplicate players
+      const existingIds = new Set(state.game.players.map(p => p.id));
+      if (existingIds.has(action.payload.id)) {
+        return state;
+      }
       return {
         ...state,
         game: { ...state.game, players: [...state.game.players, action.payload] },
       };
+    }
 
     case 'REMOVE_PLAYER':
       return {
@@ -300,6 +306,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           if (payload.current_question) dispatch({ type: 'SET_QUESTION', payload: payload.current_question as unknown as Question });
         },
         onPlayerJoin: (payload) => {
+          // Avoid duplicate - don't add if player already exists
+          const existingIds = new Set(mappedPlayers.map(p => p.id));
+          if (existingIds.has(payload.id as string)) return;
+
           const newPlayer = createDefaultPlayer({
             id: payload.id as string,
             name: payload.name as string,
@@ -323,6 +333,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         },
         onBroadcast: () => {},
       });
+
+      // Broadcast that this player joined so other clients get immediate notification
+      if (channelRef.current) {
+        db.broadcastPlayerJoined(channelRef.current, {
+          id: dbPlayer.id,
+          name: playerData.name,
+          age: playerData.age,
+          avatar_emoji: playerData.avatarEmoji,
+          difficulty: 5,
+        });
+      }
     } catch (err) {
       dispatch({ type: 'SET_ERROR', payload: (err as Error).message });
     } finally {
