@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../context/GameContext';
@@ -22,7 +22,17 @@ export function Lobby() {
   const [copied, setCopied] = useState(false);
 
   const isLocal = game.settings.mode === 'local';
+  const isOnline = game.settings.mode === 'online';
+  const iAmHost = actions.isHost();
   const canStart = game.players.length >= 2;
+
+  // Online mode: auto-navigate non-host clients to /round when game starts
+  // (game_start broadcast sets status to 'playing')
+  useEffect(() => {
+    if (isOnline && game.status === 'playing') {
+      navigate('/round');
+    }
+  }, [isOnline, game.status, navigate]);
 
   const handleAddPlayer = () => {
     if (!addName.trim()) return;
@@ -293,16 +303,31 @@ export function Lobby() {
         </>
       )}
 
-      {/* Start Button */}
-      <Button
-        variant="coral"
-        size="lg"
-        fullWidth
-        disabled={!canStart}
-        onClick={handleStart}
-      >
-        {canStart ? '🚀 Start Game' : 'Need at least 2 players'}
-      </Button>
+      {/* Start Button / Ready Toggle */}
+      {isOnline && !iAmHost ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '16px',
+            fontFamily: theme.fonts.body,
+            fontWeight: 700,
+            fontSize: '16px',
+            color: 'rgba(255,255,255,0.7)',
+          }}
+        >
+          Waiting for host to start the game...
+        </div>
+      ) : (
+        <Button
+          variant="coral"
+          size="lg"
+          fullWidth
+          disabled={!canStart}
+          onClick={handleStart}
+        >
+          {canStart ? '🚀 Start Game' : 'Need at least 2 players'}
+        </Button>
+      )}
     </div>
   );
 }

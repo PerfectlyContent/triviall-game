@@ -12,6 +12,9 @@ import { theme } from '../utils/theme';
 
 type Phase = 'loading' | 'turn-intro' | 'question' | 'result';
 
+// How long to show the result before auto-advancing (online mode)
+const RESULT_DISPLAY_MS = 3000;
+
 export function Round() {
   const navigate = useNavigate();
   const { state, actions } = useGame();
@@ -31,30 +34,120 @@ export function Round() {
   const answerTimeRef = useRef<number>(0);
 
   const currentPlayer = actions.getCurrentPlayer();
+  const isOnline = game.settings.mode === 'online';
+  const isMyTurn = !isOnline || (currentPlayer && state.myPlayerId === currentPlayer.id);
 
-  // Load question when entering loading phase
+  // Track question ID to detect new questions arriving (the ONE watcher for online mode)
+  const prevQuestionIdRef = useRef<string | null>(null);
+
+  // Helper: reset all UI state for next turn
+  const resetForNextTurn = useCallback(() => {
+    setPhase('loading');
+    setSelectedAnswer(null);
+    setResult(null);
+    setPointsAnimation(null);
+    setTimerRunning(false);
+  }, []);
+
+  // ============================
+  // LOADING PHASE (local mode only)
+  // ============================
+  // In online mode, question generation is triggered by GameContext (host generates after
+  // startGame or advance_turn). Round.tsx just waits for the question to arrive.
   useEffect(() => {
-    if (phase === 'loading') {
-      actions.loadQuestion().then(() => {
-        setPhase('turn-intro');
-      });
-    }
-  }, [phase]);
+    if (phase !== 'loading') return;
 
-  // Show turn intro briefly then move to question
+    if (!isOnline) {
+      // Local mode: generate question and transition
+      const id = setTimeout(() => {
+        actions.loadQuestion().then(() => setPhase('turn-intro'));
+      }, 50);
+      return () => clearTimeout(id);
+    }
+
+    // Online mode: do nothing here. The question arrives via broadcast,
+    // which dispatches SET_TURN_AND_QUESTION, and the watcher below handles the transition.
+  }, [phase, isOnline]);
+
+  // ============================
+  // ONLINE: Question arrives via broadcast (single watcher)
+  // ============================
+  // This is the ONE effect that drives all online phase transitions when a new question arrives.
+  // It handles: initial question after game start, and new questions after advance_turn.
+  // Works for both host (who dispatches SET_QUESTION locally) and non-host (who receives SET_TURN_AND_QUESTION via broadcast).
+  useEffect(() => {
+    if (!isOnline) return;
+    if (!game.currentQuestion) return;
+
+    // Only transition when we see a NEW question (different ID)
+    if (game.currentQuestion.id !== prevQuestionIdRef.current) {
+      prevQuestionIdRef.current = game.currentQuestion.id;
+
+      // If we're not already in turn-intro or question phase, reset and start fresh
+      if (phase === 'loading' || phase === 'result') {
+        setSelectedAnswer(null);
+        setResult(null);
+        setPointsAnimation(null);
+        setTimerRunning(false);
+        setPhase('turn-intro');
+      }
+    }
+  }, [game.currentQuestion?.id, isOnline, phase]);
+
+  // ============================
+  // ALL CLIENTS: Game ended via realtime
+  // ============================
+  useEffect(() => {
+    if (game.status === 'finished') {
+      navigate('/results');
+    }
+  }, [game.status, navigate]);
+
+  // ============================
+  // TURN INTRO → QUESTION
+  // ============================
   useEffect(() => {
     if (phase === 'turn-intro') {
+      const delay = isOnline ? 1500 : 2000;
       const timer = setTimeout(() => {
         setPhase('question');
         setTimerRunning(true);
         answerTimeRef.current = Date.now();
-      }, game.settings.mode === 'local' ? 2000 : 1000);
+      }, delay);
       return () => clearTimeout(timer);
     }
-  }, [phase, game.settings.mode]);
+  }, [phase, isOnline]);
 
+  // ============================
+  // ONLINE: Non-answering players see result when someone answers (via broadcast)
+  // ============================
+  const prevResultCountRef = useRef(game.roundResults.length);
+  useEffect(() => {
+    if (!isOnline) return;
+    if (game.roundResults.length > prevResultCountRef.current) {
+      prevResultCountRef.current = game.roundResults.length;
+      // If I wasn't the one answering, show me the result
+      if (!isMyTurn && (phase === 'question' || phase === 'loading' || phase === 'turn-intro')) {
+        setTimerRunning(false);
+        const latestResult = game.roundResults[game.roundResults.length - 1];
+        setResult({
+          isCorrect: latestResult.isCorrect,
+          points: latestResult.pointsEarned,
+          multiplier: 1,
+          correctAnswer: game.currentQuestion?.correctAnswer ?? '',
+          explanation: game.currentQuestion?.explanation ?? '',
+        });
+        setSelectedAnswer(latestResult.answer ?? '__other__');
+        setTimeout(() => setPhase('result'), 300);
+      }
+    }
+  }, [game.roundResults.length, isOnline, isMyTurn, phase, game.currentQuestion]);
+
+  // ============================
+  // ANSWER HANDLER (only the answering player)
+  // ============================
   const handleAnswer = useCallback((answer: string) => {
-    if (selectedAnswer || phase !== 'question') return;
+    if (selectedAnswer || phase !== 'question' || !isMyTurn) return;
 
     const timeElapsed = (Date.now() - answerTimeRef.current) / 1000;
     setSelectedAnswer(answer);
@@ -74,13 +167,15 @@ export function Round() {
       incorrectFeedback();
     }
 
-    setTimeout(() => {
-      setPhase('result');
-    }, 800);
-  }, [selectedAnswer, phase, actions]);
+    setTimeout(() => setPhase('result'), 800);
+  }, [selectedAnswer, phase, isMyTurn, actions]);
 
+  // ============================
+  // TIMEOUT HANDLER
+  // ============================
   const handleTimeout = useCallback(() => {
     if (selectedAnswer || phase !== 'question') return;
+    if (!isMyTurn) return; // only the answering player handles timeout
 
     setTimerRunning(false);
     setSelectedAnswer('__timeout__');
@@ -89,30 +184,47 @@ export function Round() {
     setResult(answerResult);
     incorrectFeedback();
 
-    setTimeout(() => {
-      setPhase('result');
-    }, 800);
-  }, [selectedAnswer, phase, actions, game.currentQuestion]);
+    setTimeout(() => setPhase('result'), 800);
+  }, [selectedAnswer, phase, isMyTurn, actions, game.currentQuestion]);
 
+  // ============================
+  // ONLINE: AUTO-ADVANCE after result (the answering player drives the turn)
+  // ============================
+  useEffect(() => {
+    if (!isOnline) return;
+    if (phase !== 'result') return;
+    if (!isMyTurn) return; // only the answering player auto-advances
+
+    const timer = setTimeout(() => {
+      if (actions.isGameOver()) {
+        actions.endGame();
+        navigate('/results');
+      } else {
+        // Answering player advances the turn → broadcasts advance_turn → host generates question
+        actions.nextTurn();
+        resetForNextTurn();
+      }
+    }, RESULT_DISPLAY_MS);
+
+    return () => clearTimeout(timer);
+  }, [phase, isOnline, isMyTurn, actions, navigate, resetForNextTurn]);
+
+  // ============================
+  // LOCAL MODE: Continue button handler (pass-and-play)
+  // ============================
   const handleContinue = () => {
-    // Check if game is over
     if (actions.isGameOver()) {
       actions.endGame();
       navigate('/results');
       return;
     }
-
-    // Move to next turn
     actions.nextTurn();
-
-    // Reset state for next question
-    setPhase('loading');
-    setSelectedAnswer(null);
-    setResult(null);
-    setPointsAnimation(null);
-    setTimerRunning(false);
+    resetForNextTurn();
   };
 
+  // ============================
+  // RENDERING
+  // ============================
   const getBackgroundGradient = () => {
     if (game.currentQuestion) {
       return theme.subjectGradients[game.currentQuestion.subject] || theme.gradients.teal;
@@ -120,10 +232,24 @@ export function Round() {
     return theme.gradients.teal;
   };
 
+  const myPlayer = isOnline ? game.players.find(p => p.id === state.myPlayerId) : null;
+
+  // Redirect if no current player (use useEffect to avoid setState-during-render)
+  useEffect(() => {
+    if (!currentPlayer) {
+      navigate('/');
+    }
+  }, [currentPlayer, navigate]);
+
   if (!currentPlayer) {
-    navigate('/');
     return null;
   }
+
+  const getLoadingMessage = () => {
+    if (!isOnline) return 'Generating question...';
+    if (isMyTurn) return 'Generating your question...';
+    return `Waiting for ${currentPlayer.name}'s turn...`;
+  };
 
   return (
     <div
@@ -157,7 +283,7 @@ export function Round() {
           Round {Math.min(game.currentRound, game.settings.rounds)}/{game.settings.rounds}
         </div>
 
-        {phase === 'question' && game.currentQuestion && (
+        {phase === 'question' && game.currentQuestion && isMyTurn && (
           <Timer
             duration={game.currentQuestion.timeLimit}
             onTimeout={handleTimeout}
@@ -196,7 +322,7 @@ export function Round() {
               color: theme.colors.white,
             }}
           >
-            {currentPlayer.name}'s Turn
+            {isMyTurn ? 'Your Turn' : `${currentPlayer.name}'s Turn`}
           </span>
         </div>
       </div>
@@ -218,39 +344,44 @@ export function Round() {
       </div>
 
       {/* Score & Streak */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '16px',
-          marginBottom: '20px',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: theme.fonts.display,
-            fontWeight: 700,
-            fontSize: '14px',
-            color: 'rgba(255,255,255,0.8)',
-          }}
-        >
-          {currentPlayer.score} pts
-        </span>
-        {currentPlayer.streak >= 2 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+      {(() => {
+        const displayPlayer = isOnline && myPlayer ? myPlayer : currentPlayer;
+        return (
+          <div
             style={{
-              fontFamily: theme.fonts.display,
-              fontWeight: 700,
-              fontSize: '14px',
-              color: theme.colors.brightYellow,
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '16px',
+              marginBottom: '20px',
             }}
           >
-            🔥 {currentPlayer.streak} streak
-          </motion.span>
-        )}
-      </div>
+            <span
+              style={{
+                fontFamily: theme.fonts.display,
+                fontWeight: 700,
+                fontSize: '14px',
+                color: 'rgba(255,255,255,0.8)',
+              }}
+            >
+              {displayPlayer.score} pts
+            </span>
+            {displayPlayer.streak >= 2 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                style={{
+                  fontFamily: theme.fonts.display,
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  color: theme.colors.brightYellow,
+                }}
+              >
+                🔥 {displayPlayer.streak} streak
+              </motion.span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Main Content */}
       <AnimatePresence mode="wait">
@@ -277,9 +408,10 @@ export function Round() {
                 fontWeight: 700,
                 fontSize: '16px',
                 color: theme.colors.white,
+                textAlign: 'center',
               }}
             >
-              Generating question...
+              {getLoadingMessage()}
             </p>
           </motion.div>
         )}
@@ -310,7 +442,7 @@ export function Round() {
                 textAlign: 'center',
               }}
             >
-              🎯 {currentPlayer.name}'s Turn
+              {isMyTurn ? '🎯 Your Turn!' : `🎯 ${currentPlayer.name}'s Turn`}
             </h2>
             <p
               style={{
@@ -320,19 +452,54 @@ export function Round() {
                 color: 'rgba(255,255,255,0.7)',
               }}
             >
-              Get ready!
+              {isMyTurn ? 'Get ready!' : 'Watch and wait...'}
             </p>
           </motion.div>
         )}
 
-        {/* Question */}
+        {/* Question + Result */}
         {(phase === 'question' || phase === 'result') && game.currentQuestion && (
           <motion.div
             key="question"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
+            style={{ position: 'relative' }}
           >
+            {/* Watching overlay for non-answering players */}
+            {isOnline && !isMyTurn && phase === 'question' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -20,
+                  left: -20,
+                  right: -20,
+                  bottom: -20,
+                  background: 'rgba(0,0,0,0.6)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 100,
+                  borderRadius: theme.borderRadius.lg,
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                <span style={{ fontSize: '48px', marginBottom: '16px' }}>👀</span>
+                <p
+                  style={{
+                    fontFamily: theme.fonts.display,
+                    fontWeight: 700,
+                    fontSize: '18px',
+                    color: theme.colors.white,
+                    textAlign: 'center',
+                  }}
+                >
+                  {currentPlayer.name} is answering...
+                </p>
+              </div>
+            )}
+
             <QuestionCard
               question={game.currentQuestion}
               onAnswer={handleAnswer}
@@ -407,14 +574,31 @@ export function Round() {
                   </p>
                 </div>
 
-                <Button
-                  variant="coral"
-                  size="lg"
-                  fullWidth
-                  onClick={handleContinue}
-                >
-                  {actions.isGameOver() ? '🏆 See Results' : '➡️ Continue'}
-                </Button>
+                {/* LOCAL MODE: show Continue button (pass-and-play needs manual advance) */}
+                {/* ONLINE MODE: auto-advances after 3 seconds — show a countdown hint */}
+                {isOnline ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '12px',
+                      fontFamily: theme.fonts.body,
+                      fontWeight: 600,
+                      fontSize: '14px',
+                      color: 'rgba(255,255,255,0.6)',
+                    }}
+                  >
+                    Next turn in a moment...
+                  </div>
+                ) : (
+                  <Button
+                    variant="coral"
+                    size="lg"
+                    fullWidth
+                    onClick={handleContinue}
+                  >
+                    {actions.isGameOver() ? '🏆 See Results' : '➡️ Continue'}
+                  </Button>
+                )}
               </motion.div>
             )}
           </motion.div>

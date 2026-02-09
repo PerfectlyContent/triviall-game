@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import type { Player, Question, GameState, GameSettings, GameStatus, RoundResult, AgeGroup } from '../types';
@@ -20,6 +20,8 @@ type GameAction =
   | { type: 'SET_QUESTION'; payload: Question }
   | { type: 'RECORD_RESULT'; payload: RoundResult }
   | { type: 'NEXT_TURN' }
+  | { type: 'SET_TURN_AND_QUESTION'; payload: { turnIndex: number; round: number; question: Question } }
+  | { type: 'PREPARE_NEXT_TURN'; payload: { turnIndex: number; round: number } }
   | { type: 'SET_ROUND'; payload: number }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -41,11 +43,8 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
       return { ...state, game: action.payload };
 
     case 'ADD_PLAYER': {
-      // Prevent duplicate players
       const existingIds = new Set(state.game.players.map(p => p.id));
-      if (existingIds.has(action.payload.id)) {
-        return state;
-      }
+      if (existingIds.has(action.payload.id)) return state;
       return {
         ...state,
         game: { ...state.game, players: [...state.game.players, action.payload] },
@@ -103,6 +102,7 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
         },
       };
 
+    // Local mode: advance to next player (clears question)
     case 'NEXT_TURN': {
       const nextIndex = (state.game.currentPlayerTurnIndex + 1) % state.game.players.length;
       const isNewRound = nextIndex === 0;
@@ -116,6 +116,32 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
         },
       };
     }
+
+    // Online mode: atomic turn + question (received from host broadcast)
+    // Eliminates the window where turn changed but question is null
+    case 'SET_TURN_AND_QUESTION':
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          currentPlayerTurnIndex: action.payload.turnIndex,
+          currentRound: action.payload.round,
+          currentQuestion: action.payload.question,
+          questionHistory: [...state.game.questionHistory, action.payload.question.text],
+        },
+      };
+
+    // Online mode: turn is advancing, waiting for host to generate question
+    case 'PREPARE_NEXT_TURN':
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          currentPlayerTurnIndex: action.payload.turnIndex,
+          currentRound: action.payload.round,
+          currentQuestion: null,
+        },
+      };
 
     case 'SET_ROUND':
       return { ...state, game: { ...state.game, currentRound: action.payload } };
@@ -152,6 +178,7 @@ interface GameContextValue {
     resetGame: () => void;
     getCurrentPlayer: () => Player | undefined;
     isGameOver: () => boolean;
+    isHost: () => boolean;
   };
 }
 
@@ -166,6 +193,134 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   });
 
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  // Ref for loadQuestion so the broadcast handler can call it without circular deps
+  const loadQuestionRef = useRef<() => Promise<void>>();
+
+  const amIHost = useCallback(() => {
+    return state.myPlayerId === state.game.hostId;
+  }, [state.myPlayerId, state.game.hostId]);
+
+  // =============================================
+  // BROADCAST-ONLY realtime callbacks
+  // No more postgres_changes for games or player updates during gameplay.
+  // Only postgres_changes INSERT on players (lobby backup).
+  // =============================================
+  const setupRealtimeCallbacks = useCallback(() => ({
+    onPlayerInsert: (payload: Record<string, unknown>) => {
+      const s = stateRef.current;
+      // Only process player inserts during lobby
+      if (s.game.status !== 'lobby') return;
+
+      const newPlayer = createDefaultPlayer({
+        id: payload.id as string,
+        name: payload.name as string,
+        age: payload.age as AgeGroup,
+        avatarEmoji: payload.avatar_emoji as string,
+        difficulty: payload.difficulty as number,
+        isHost: payload.is_host as boolean || false,
+      });
+      dispatch({ type: 'ADD_PLAYER', payload: newPlayer });
+    },
+
+    onBroadcast: (eventType: string, payload: Record<string, unknown>) => {
+      const s = stateRef.current;
+      const isSelf = payload.senderId === s.myPlayerId;
+
+      console.log('[Broadcast]', eventType, isSelf ? '(self, skip)' : '', payload);
+
+      // Skip broadcasts we sent ourselves — we already applied the state locally
+      if (isSelf) return;
+
+      switch (eventType) {
+        case 'game_start':
+          dispatch({ type: 'SET_STATUS', payload: 'playing' });
+          dispatch({
+            type: 'PREPARE_NEXT_TURN',
+            payload: { turnIndex: payload.turnIndex as number, round: payload.round as number },
+          });
+          break;
+
+        case 'question':
+          dispatch({
+            type: 'SET_TURN_AND_QUESTION',
+            payload: {
+              turnIndex: payload.turnIndex as number,
+              round: payload.round as number,
+              question: payload.question as unknown as Question,
+            },
+          });
+          break;
+
+        case 'answer': {
+          // Record the result
+          dispatch({
+            type: 'RECORD_RESULT',
+            payload: {
+              playerId: payload.playerId as string,
+              round: payload.round as number,
+              questionId: payload.questionId as string,
+              answer: payload.answer as string,
+              isCorrect: payload.isCorrect as boolean,
+              timeElapsed: (payload.timeElapsed as number) || 0,
+              pointsEarned: payload.points as number,
+            },
+          });
+          // Update the player's score/streak from the broadcast
+          dispatch({
+            type: 'UPDATE_PLAYER',
+            payload: {
+              id: payload.playerId as string,
+              updates: {
+                score: payload.newScore as number,
+                streak: payload.streak as number,
+                correctAnswers: payload.correctAnswers as number,
+                totalAnswers: payload.totalAnswers as number,
+                lives: payload.lives as number,
+              },
+            },
+          });
+          break;
+        }
+
+        case 'advance_turn':
+          dispatch({
+            type: 'PREPARE_NEXT_TURN',
+            payload: {
+              turnIndex: payload.nextTurnIndex as number,
+              round: payload.nextRound as number,
+            },
+          });
+          // If I'm the host, I need to generate the next question
+          if (s.myPlayerId === s.game.hostId) {
+            // Small delay to let state update flush before generating question
+            setTimeout(() => {
+              loadQuestionRef.current?.();
+            }, 100);
+          }
+          break;
+
+        case 'game_over':
+          dispatch({ type: 'SET_STATUS', payload: 'finished' });
+          break;
+
+        case 'player_ready':
+          dispatch({
+            type: 'UPDATE_PLAYER',
+            payload: {
+              id: payload.playerId as string,
+              updates: { isReady: payload.isReady as boolean },
+            },
+          });
+          break;
+
+        default:
+          console.warn('[Broadcast] Unknown event type:', eventType);
+      }
+    },
+  }), []);
 
   const createGame = useCallback(async (
     playerData: { name: string; age: AgeGroup; avatarEmoji: string },
@@ -195,9 +350,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
 
     dispatch({ type: 'SET_GAME', payload: gameState });
-    dispatch({ type: 'SET_LOADING', payload: false });
+    dispatch({ type: 'SET_MY_PLAYER_ID', payload: playerId });
 
-    // For online mode, create in Supabase
     if (settings.mode === 'online' && roomCode) {
       try {
         const dbGame = await db.createGame({
@@ -205,7 +359,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           host_id: playerId,
           settings: settings as unknown as object,
         });
-        gameState.id = dbGame.id;
+
         await db.addPlayer({
           game_id: dbGame.id,
           name: playerData.name,
@@ -215,36 +369,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           is_host: true,
         });
 
-        // Subscribe to realtime
-        channelRef.current = db.subscribeToGame(roomCode, dbGame.id, {
-          onGameUpdate: (payload) => {
-            if (payload.status) dispatch({ type: 'SET_STATUS', payload: payload.status as GameStatus });
-            if (payload.current_question) dispatch({ type: 'SET_QUESTION', payload: payload.current_question as unknown as Question });
-          },
-          onPlayerJoin: (payload) => {
-            const newPlayer = createDefaultPlayer({
-              id: payload.id as string,
-              name: payload.name as string,
-              age: payload.age as AgeGroup,
-              avatarEmoji: payload.avatar_emoji as string,
-              difficulty: payload.difficulty as number,
-            });
-            dispatch({ type: 'ADD_PLAYER', payload: newPlayer });
-          },
-          onPlayerUpdate: (payload) => {
-            dispatch({
-              type: 'UPDATE_PLAYER',
-              payload: {
-                id: payload.id as string,
-                updates: {
-                  score: payload.score as number,
-                  isReady: payload.is_ready as boolean,
-                },
-              },
-            });
-          },
-          onBroadcast: () => {},
-        });
+        const callbacks = setupRealtimeCallbacks();
+        channelRef.current = db.subscribeToGame(roomCode, dbGame.id, callbacks);
 
         dispatch({ type: 'SET_GAME', payload: { ...gameState, id: dbGame.id } });
       } catch (err) {
@@ -252,10 +378,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Store my player ID properly via dispatch
-    dispatch({ type: 'SET_MY_PLAYER_ID', payload: playerId });
     return playerId;
-  }, []);
+  }, [setupRealtimeCallbacks]);
 
   const joinGame = useCallback(async (
     roomCode: string,
@@ -303,42 +427,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_GAME', payload: gameState });
       dispatch({ type: 'SET_MY_PLAYER_ID', payload: dbPlayer.id });
 
-      // Subscribe to realtime
-      channelRef.current = db.subscribeToGame(roomCode, game.id, {
-        onGameUpdate: (payload) => {
-          if (payload.status) dispatch({ type: 'SET_STATUS', payload: payload.status as GameStatus });
-          if (payload.current_question) dispatch({ type: 'SET_QUESTION', payload: payload.current_question as unknown as Question });
-        },
-        onPlayerJoin: (payload) => {
-          // Avoid duplicate - don't add if player already exists
-          const existingIds = new Set(mappedPlayers.map(p => p.id));
-          if (existingIds.has(payload.id as string)) return;
+      const callbacks = setupRealtimeCallbacks();
+      channelRef.current = db.subscribeToGame(roomCode, game.id, callbacks);
 
-          const newPlayer = createDefaultPlayer({
-            id: payload.id as string,
-            name: payload.name as string,
-            age: payload.age as AgeGroup,
-            avatarEmoji: payload.avatar_emoji as string,
-            difficulty: payload.difficulty as number,
-          });
-          dispatch({ type: 'ADD_PLAYER', payload: newPlayer });
-        },
-        onPlayerUpdate: (payload) => {
-          dispatch({
-            type: 'UPDATE_PLAYER',
-            payload: {
-              id: payload.id as string,
-              updates: {
-                score: payload.score as number,
-                isReady: payload.is_ready as boolean,
-              },
-            },
-          });
-        },
-        onBroadcast: () => {},
-      });
-
-      // Broadcast that this player joined so other clients get immediate notification
       if (channelRef.current) {
         db.broadcastPlayerJoined(channelRef.current, {
           id: dbPlayer.id,
@@ -353,7 +444,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, []);
+  }, [setupRealtimeCallbacks]);
 
   const addLocalPlayer = useCallback((playerData: { name: string; age: AgeGroup; avatarEmoji: string }) => {
     const player = createDefaultPlayer({
@@ -375,53 +466,114 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setReady = useCallback((ready: boolean) => {
-    if (state.myPlayerId) {
-      dispatch({ type: 'UPDATE_PLAYER', payload: { id: state.myPlayerId, updates: { isReady: ready } } });
-      if (state.game.settings.mode === 'online') {
-        db.updatePlayer(state.myPlayerId, { is_ready: ready }).catch(console.error);
+    const s = stateRef.current;
+    if (!s.myPlayerId) return;
+
+    dispatch({ type: 'UPDATE_PLAYER', payload: { id: s.myPlayerId, updates: { isReady: ready } } });
+
+    if (s.game.settings.mode === 'online') {
+      // Broadcast ready state to all clients
+      if (channelRef.current) {
+        db.broadcastGameEvent(channelRef.current, 'player_ready', {
+          senderId: s.myPlayerId,
+          playerId: s.myPlayerId,
+          isReady: ready,
+        });
       }
+      // DB write for persistence
+      db.updatePlayer(s.myPlayerId, { is_ready: ready }).catch(() => {});
     }
-  }, [state.myPlayerId, state.game.settings.mode]);
+  }, []);
 
   const startGame = useCallback(() => {
+    const s = stateRef.current;
+
+    // Local dispatches
     dispatch({ type: 'SET_STATUS', payload: 'playing' });
     dispatch({ type: 'SET_ROUND', payload: 1 });
-    if (state.game.settings.mode === 'online') {
-      db.updateGame(state.game.id, { status: 'playing', current_round: 1 }).catch(console.error);
-    }
-  }, [state.game.id, state.game.settings.mode]);
+    dispatch({ type: 'PREPARE_NEXT_TURN', payload: { turnIndex: 0, round: 1 } });
 
+    if (s.game.settings.mode === 'online') {
+      // Broadcast to all clients
+      if (channelRef.current) {
+        db.broadcastGameEvent(channelRef.current, 'game_start', {
+          senderId: s.myPlayerId,
+          turnIndex: 0,
+          round: 1,
+        });
+      }
+      // DB write (persistence only, fire-and-forget)
+      db.updateGame(s.game.id, {
+        status: 'playing',
+        current_round: 1,
+      }).catch(() => {});
+
+      // Host generates the first question immediately
+      setTimeout(() => {
+        loadQuestionRef.current?.();
+      }, 100);
+    }
+  }, []);
+
+  // loadQuestion: ONLY the host generates questions in online mode.
+  // Non-host clients receive questions via the 'question' broadcast.
   const loadQuestion = useCallback(async () => {
+    const s = stateRef.current;
+    const isOnline = s.game.settings.mode === 'online';
+    const iAmHost = s.myPlayerId === s.game.hostId;
+
+    // In online mode, only host generates questions
+    if (isOnline && !iAmHost) {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      return;
+    }
+
     dispatch({ type: 'SET_LOADING', payload: true });
-    const currentPlayer = state.game.players[state.game.currentPlayerTurnIndex];
+    const currentPlayer = s.game.players[s.game.currentPlayerTurnIndex];
     if (!currentPlayer) return;
 
-    const subjects = state.game.settings.subjects;
+    const subjects = s.game.settings.subjects;
     const subject = subjects[Math.floor(Math.random() * subjects.length)];
 
+    let question;
     try {
-      const question = await generateQuestion({
+      question = await generateQuestion({
         subject,
         difficulty: currentPlayer.difficulty,
         age: currentPlayer.age,
-        previousQuestions: state.game.questionHistory,
+        previousQuestions: s.game.questionHistory,
       });
-      dispatch({ type: 'SET_QUESTION', payload: question });
-
-      if (state.game.settings.mode === 'online') {
-        db.updateGame(state.game.id, { current_question: question as unknown as object }).catch(console.error);
-      }
-    } catch {
-      const fallback = getFallbackQuestion(subject);
-      dispatch({ type: 'SET_QUESTION', payload: fallback });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+    } catch (err) {
+      console.warn('[loadQuestion] Gemini failed, using fallback:', err);
+      question = getFallbackQuestion(subject);
     }
-  }, [state.game]);
+
+    // Host dispatches locally
+    dispatch({ type: 'SET_QUESTION', payload: question });
+    dispatch({ type: 'SET_LOADING', payload: false });
+
+    if (isOnline && channelRef.current) {
+      // Broadcast atomic question event (turn + round + question together)
+      db.broadcastGameEvent(channelRef.current, 'question', {
+        senderId: s.myPlayerId,
+        question,
+        turnIndex: s.game.currentPlayerTurnIndex,
+        round: s.game.currentRound,
+      });
+      // DB write (persistence only, fire-and-forget — ok if schema doesn't have this column)
+      db.updateGame(s.game.id, {
+        current_round: s.game.currentRound,
+      }).catch(() => {});
+    }
+  }, []);
+
+  // Keep loadQuestionRef in sync
+  useEffect(() => { loadQuestionRef.current = loadQuestion; }, [loadQuestion]);
 
   const submitAnswer = useCallback((answer: string, timeElapsed: number) => {
-    const question = state.game.currentQuestion!;
-    const currentPlayer = state.game.players[state.game.currentPlayerTurnIndex];
+    const s = stateRef.current;
+    const question = s.game.currentQuestion!;
+    const currentPlayer = s.game.players[s.game.currentPlayerTurnIndex];
     const isCorrect = answer === question.correctAnswer;
     const { points, newStreak, multiplier } = calculatePoints(isCorrect, currentPlayer.streak, timeElapsed, question.timeLimit);
     const newDifficulty = adjustDifficulty(currentPlayer.difficulty, isCorrect, newStreak);
@@ -443,7 +595,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const result: RoundResult = {
       playerId: currentPlayer.id,
-      round: state.game.currentRound,
+      round: s.game.currentRound,
       questionId: question.id,
       answer,
       isCorrect,
@@ -452,29 +604,95 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
     dispatch({ type: 'RECORD_RESULT', payload: result });
 
-    return { isCorrect, points, multiplier, correctAnswer: question.correctAnswer, explanation: question.explanation };
-  }, [state.game]);
+    if (s.game.settings.mode === 'online') {
+      // Broadcast answer result with full player state
+      if (channelRef.current) {
+        db.broadcastGameEvent(channelRef.current, 'answer', {
+          senderId: currentPlayer.id,
+          playerId: currentPlayer.id,
+          isCorrect,
+          points,
+          newScore: currentPlayer.score + points,
+          streak: newStreak,
+          correctAnswers: currentPlayer.correctAnswers + (isCorrect ? 1 : 0),
+          totalAnswers: currentPlayer.totalAnswers + 1,
+          lives: isCorrect ? currentPlayer.lives : Math.max(0, currentPlayer.lives - 1),
+          answer,
+          questionId: question.id,
+          round: s.game.currentRound,
+          timeElapsed,
+        });
+      }
+      // DB write (persistence, fire-and-forget)
+      db.updatePlayer(currentPlayer.id, {
+        score: currentPlayer.score + points,
+        streak: newStreak,
+        correct_answers: currentPlayer.correctAnswers + (isCorrect ? 1 : 0),
+        total_answers: currentPlayer.totalAnswers + 1,
+      }).catch(() => {});
+    }
 
+    return { isCorrect, points, multiplier, correctAnswer: question.correctAnswer, explanation: question.explanation };
+  }, []);
+
+  // nextTurn: called by answering player after result display.
+  // In online mode: broadcasts advance_turn, host generates next question.
   const nextTurn = useCallback(() => {
-    dispatch({ type: 'NEXT_TURN' });
+    const s = stateRef.current;
+    const nextIndex = (s.game.currentPlayerTurnIndex + 1) % s.game.players.length;
+    const isNewRound = nextIndex === 0;
+    const nextRound = isNewRound ? s.game.currentRound + 1 : s.game.currentRound;
+
+    if (s.game.settings.mode === 'online') {
+      // Dispatch locally: prepare for next turn (question = null while host generates)
+      dispatch({ type: 'PREPARE_NEXT_TURN', payload: { turnIndex: nextIndex, round: nextRound } });
+
+      // Broadcast advance_turn to all clients
+      if (channelRef.current) {
+        db.broadcastGameEvent(channelRef.current, 'advance_turn', {
+          senderId: s.myPlayerId,
+          nextTurnIndex: nextIndex,
+          nextRound: nextRound,
+        });
+      }
+      // DB write (persistence, fire-and-forget)
+      db.updateGame(s.game.id, {
+        current_round: nextRound,
+      }).catch(() => {});
+
+      // If I'm the host, generate the next question
+      if (s.myPlayerId === s.game.hostId) {
+        setTimeout(() => {
+          loadQuestionRef.current?.();
+        }, 100);
+      }
+    } else {
+      // Local mode: simple NEXT_TURN dispatch
+      dispatch({ type: 'NEXT_TURN' });
+    }
   }, []);
 
   const isGameOver = useCallback(() => {
-    const totalTurns = state.game.settings.rounds * state.game.players.length;
-    const completedTurns = state.game.roundResults.length;
+    const s = stateRef.current;
+    const totalTurns = s.game.settings.rounds * s.game.players.length;
+    const completedTurns = s.game.roundResults.length;
     return completedTurns >= totalTurns;
-  }, [state.game]);
+  }, []);
 
   const endGame = useCallback(() => {
+    const s = stateRef.current;
     dispatch({ type: 'SET_STATUS', payload: 'finished' });
-    if (state.game.settings.mode === 'online') {
-      db.updateGame(state.game.id, { status: 'finished' }).catch(console.error);
+    if (s.game.settings.mode === 'online') {
+      if (channelRef.current) {
+        db.broadcastGameEvent(channelRef.current, 'game_over', { senderId: s.myPlayerId });
+      }
+      db.updateGame(s.game.id, { status: 'finished' }).catch(() => {});
     }
     if (channelRef.current) {
       channelRef.current.unsubscribe();
       channelRef.current = null;
     }
-  }, [state.game.id, state.game.settings.mode]);
+  }, []);
 
   const resetGame = useCallback(() => {
     if (channelRef.current) {
@@ -485,8 +703,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getCurrentPlayer = useCallback(() => {
-    return state.game.players[state.game.currentPlayerTurnIndex];
-  }, [state.game.players, state.game.currentPlayerTurnIndex]);
+    return stateRef.current.game.players[stateRef.current.game.currentPlayerTurnIndex];
+  }, []);
 
   const value: GameContextValue = {
     state,
@@ -505,6 +723,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       resetGame,
       getCurrentPlayer,
       isGameOver,
+      isHost: amIHost,
     },
   };
 

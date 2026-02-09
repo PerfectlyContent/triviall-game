@@ -89,58 +89,44 @@ export async function getPlayersForGame(gameId: string) {
   return data;
 }
 
-// --- Realtime ---
+// --- Realtime (Broadcast-only for gameplay, postgres_changes INSERT for lobby) ---
 export function subscribeToGame(
   roomCode: string,
   gameId: string,
   callbacks: {
-    onGameUpdate: (payload: Record<string, unknown>) => void;
-    onPlayerJoin: (payload: Record<string, unknown>) => void;
-    onPlayerUpdate: (payload: Record<string, unknown>) => void;
     onBroadcast: (event: string, payload: Record<string, unknown>) => void;
+    onPlayerInsert: (payload: Record<string, unknown>) => void;
   },
 ): RealtimeChannel | null {
   if (!supabase) return null;
 
-  const channel = supabase.channel(`game:${roomCode}`);
+  const channel = supabase.channel(`game:${roomCode}`, {
+    config: { broadcast: { self: false, ack: true } },
+  });
 
   channel
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'games', filter: `room_code=eq.${roomCode}` },
-      (payload) => {
-        console.log('[Realtime] Game update:', payload.new);
-        callbacks.onGameUpdate(payload.new as Record<string, unknown>);
-      },
-    )
+    // Lobby only: detect new players via DB insert (backup for broadcast)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` },
       (payload) => {
-        console.log('[Realtime] Player joined:', payload.new);
-        callbacks.onPlayerJoin(payload.new as Record<string, unknown>);
+        console.log('[Realtime] Player INSERT (DB):', payload.new);
+        callbacks.onPlayerInsert(payload.new as Record<string, unknown>);
       },
     )
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` },
-      (payload) => {
-        console.log('[Realtime] Player update:', payload.new);
-        callbacks.onPlayerUpdate(payload.new as Record<string, unknown>);
-      },
-    )
+    // ALL game events flow through broadcast (fast, no DB round-trip)
     .on('broadcast', { event: 'game_event' }, (payload) => {
-      callbacks.onBroadcast(
-        (payload.payload as Record<string, unknown>).type as string,
-        payload.payload as Record<string, unknown>,
-      );
+      const p = payload.payload as Record<string, unknown>;
+      console.log('[Realtime] Broadcast:', p.type, p);
+      callbacks.onBroadcast(p.type as string, p);
     })
+    // Player joined broadcast (lobby)
     .on('broadcast', { event: 'player_joined' }, (payload) => {
-      console.log('[Realtime] Broadcast player joined:', payload.payload);
-      callbacks.onPlayerJoin(payload.payload as Record<string, unknown>);
+      console.log('[Realtime] Broadcast player_joined:', payload.payload);
+      callbacks.onPlayerInsert(payload.payload as Record<string, unknown>);
     })
     .subscribe((status) => {
-      console.log('[Realtime] Subscription status:', status);
+      console.log('[Realtime] Channel status:', status);
     });
 
   return channel;
@@ -151,14 +137,18 @@ export function broadcastGameEvent(
   type: string,
   payload: Record<string, unknown>,
 ) {
+  console.log('[Broadcast SEND]', type, payload);
   channel.send({
     type: 'broadcast',
     event: 'game_event',
     payload: { type, ...payload },
+  }).then((status) => {
+    console.log('[Broadcast ACK]', type, status);
+  }).catch((err) => {
+    console.error('[Broadcast ERROR]', type, err);
   });
 }
 
-// Broadcast when a player joins (for immediate sync)
 export function broadcastPlayerJoined(
   channel: RealtimeChannel,
   player: Record<string, unknown>,
