@@ -40,6 +40,9 @@ export function Round() {
   // Track question ID to detect new questions arriving (the ONE watcher for online mode)
   const prevQuestionIdRef = useRef<string | null>(null);
 
+  // Track whether THIS client answered the current question (used for auto-advance guard)
+  const iAnsweredRef = useRef(false);
+
   // Helper: reset all UI state for next turn
   const resetForNextTurn = useCallback(() => {
     setPhase('loading');
@@ -47,6 +50,7 @@ export function Round() {
     setResult(null);
     setPointsAnimation(null);
     setTimerRunning(false);
+    iAnsweredRef.current = false;
   }, []);
 
   // ============================
@@ -82,6 +86,7 @@ export function Round() {
     // Only transition when we see a NEW question (different ID)
     if (game.currentQuestion.id !== prevQuestionIdRef.current) {
       prevQuestionIdRef.current = game.currentQuestion.id;
+      iAnsweredRef.current = false; // Reset for new question
 
       // If we're not already in turn-intro or question phase, reset and start fresh
       if (phase === 'loading' || phase === 'result') {
@@ -149,6 +154,7 @@ export function Round() {
   const handleAnswer = useCallback((answer: string) => {
     if (selectedAnswer || phase !== 'question' || !isMyTurn) return;
 
+    iAnsweredRef.current = true; // Mark that THIS client answered
     const timeElapsed = (Date.now() - answerTimeRef.current) / 1000;
     setSelectedAnswer(answer);
     setTimerRunning(false);
@@ -177,6 +183,7 @@ export function Round() {
     if (selectedAnswer || phase !== 'question') return;
     if (!isMyTurn) return; // only the answering player handles timeout
 
+    iAnsweredRef.current = true; // Mark that THIS client answered (timeout)
     setTimerRunning(false);
     setSelectedAnswer('__timeout__');
 
@@ -188,12 +195,12 @@ export function Round() {
   }, [selectedAnswer, phase, isMyTurn, actions, game.currentQuestion]);
 
   // ============================
-  // ONLINE: AUTO-ADVANCE after result (the answering player drives the turn)
+  // ONLINE: AUTO-ADVANCE after result (ONLY the player who answered drives the turn)
   // ============================
   useEffect(() => {
     if (!isOnline) return;
     if (phase !== 'result') return;
-    if (!isMyTurn) return; // only the answering player auto-advances
+    if (!iAnsweredRef.current) return; // only the player who actually answered auto-advances
 
     const timer = setTimeout(() => {
       if (actions.isGameOver()) {
@@ -207,7 +214,7 @@ export function Round() {
     }, RESULT_DISPLAY_MS);
 
     return () => clearTimeout(timer);
-  }, [phase, isOnline, isMyTurn, actions, navigate, resetForNextTurn]);
+  }, [phase, isOnline, actions, navigate, resetForNextTurn]);
 
   // ============================
   // LOCAL MODE: Continue button handler (pass-and-play)
