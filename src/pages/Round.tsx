@@ -267,8 +267,6 @@ export function Round() {
     return theme.gradients.teal;
   };
 
-  const myPlayer = isOnline ? game.players.find(p => p.id === state.myPlayerId) : null;
-
   // Redirect if no current player (use useEffect to avoid setState-during-render)
   useEffect(() => {
     if (!currentPlayer) {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import type { Question, Subject } from '../../types';
 import type { TranslationKey } from '../../i18n/translations';
 import { useTranslation } from '../../i18n';
@@ -8,16 +8,16 @@ import { theme } from '../../utils/theme';
 const SUBJECT_TRANSLATION_KEYS: Record<Subject, TranslationKey> = {
   Science: 'subject.Science',
   History: 'subject.History',
-  Geography: 'subject.Geography',
-  Sports: 'subject.Sports',
-  Music: 'subject.Music',
+  Gaming: 'subject.Gaming',
   Movies: 'subject.Movies',
+  Music: 'subject.Music',
+  Sports: 'subject.Sports',
   Nature: 'subject.Nature',
   Food: 'subject.Food',
-  Technology: 'subject.Technology',
-  Literature: 'subject.Literature',
+  Travel: 'subject.Travel',
+  'Pop Culture': 'subject.PopCulture',
   Art: 'subject.Art',
-  'General Knowledge': 'subject.GeneralKnowledge',
+  Tech: 'subject.Tech',
 };
 
 interface QuestionCardProps {
