@@ -1,6 +1,10 @@
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../components/ui/Button';
+import { useTranslation } from '../i18n';
+import { useLanguage } from '../App';
+import { LANGUAGES } from '../types';
 import { theme } from '../utils/theme';
 
 const floatingShapes = [
@@ -13,6 +17,24 @@ const floatingShapes = [
 
 export function Home() {
   const navigate = useNavigate();
+  const { t, isRTL } = useTranslation();
+  const { language, setLanguage } = useLanguage();
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showLangDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowLangDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showLangDropdown]);
+
+  const currentLang = LANGUAGES.find((l) => l.code === language);
 
   return (
     <div
@@ -28,6 +50,94 @@ export function Home() {
         overflow: 'hidden',
       }}
     >
+      {/* Language selector */}
+      <div
+        ref={dropdownRef}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          [isRTL ? 'left' : 'right']: '16px',
+          zIndex: 10,
+        }}
+      >
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowLangDropdown(!showLangDropdown)}
+          style={{
+            background: 'rgba(255,255,255,0.15)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '44px',
+            height: '44px',
+            fontSize: '20px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          title="Change language"
+        >
+          {currentLang?.flag ?? '🌐'}
+        </motion.button>
+
+        <AnimatePresence>
+          {showLangDropdown && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -8 }}
+              transition={{ duration: 0.15 }}
+              style={{
+                position: 'absolute',
+                top: '52px',
+                [isRTL ? 'left' : 'right']: '0',
+                background: 'rgba(30, 20, 60, 0.95)',
+                borderRadius: '16px',
+                padding: '8px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(20px)',
+                minWidth: '160px',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              {LANGUAGES.map((lang) => (
+                <motion.button
+                  key={lang.code}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setLanguage(lang.code);
+                    setShowLangDropdown(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: language === lang.code ? 'rgba(255,255,255,0.15)' : 'transparent',
+                    color: theme.colors.white,
+                    fontFamily: theme.fonts.body,
+                    fontWeight: language === lang.code ? 700 : 500,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    textAlign: isRTL ? 'right' : 'left',
+                    direction: lang.rtl ? 'rtl' : 'ltr',
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>{lang.flag}</span>
+                  <span>{lang.nativeName}</span>
+                  {language === lang.code && (
+                    <span style={{ marginInlineStart: 'auto', fontSize: '14px', color: theme.colors.primaryTeal }}>✓</span>
+                  )}
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* Floating shapes */}
       {floatingShapes.map((shape, i) => (
         <motion.div
@@ -80,9 +190,9 @@ export function Home() {
             letterSpacing: '-1px',
           }}
         >
-          TRIVIA
+          {t('home.trivia')}
           <br />
-          GAME
+          {t('home.game')}
         </h1>
       </motion.div>
 
@@ -120,7 +230,7 @@ export function Home() {
           zIndex: 1,
         }}
       >
-        Fair play for everyone
+        {t('home.tagline')}
       </motion.p>
 
       {/* Buttons */}
@@ -144,7 +254,7 @@ export function Home() {
           fullWidth
           onClick={() => navigate('/setup')}
         >
-          🎮 Host New Game
+          🎮 {t('home.hostGame')}
         </Button>
         <Button
           variant="outline"
@@ -152,7 +262,7 @@ export function Home() {
           fullWidth
           onClick={() => navigate('/join')}
         >
-          🔗 Join Game
+          🔗 {t('home.joinGame')}
         </Button>
       </motion.div>
 
@@ -169,7 +279,7 @@ export function Home() {
           bottom: '20px',
         }}
       >
-        Powered by AI
+        {t('home.poweredBy')}
       </motion.p>
     </div>
   );

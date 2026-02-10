@@ -13,7 +13,7 @@ export function EmojiPicker({ selected, onSelect }: EmojiPickerProps) {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(6, 1fr)',
-        gap: '8px',
+        gap: '6px',
       }}
     >
       {AVATAR_EMOJIS.map((emoji) => (
@@ -23,9 +23,9 @@ export function EmojiPicker({ selected, onSelect }: EmojiPickerProps) {
           whileTap={{ scale: 0.9 }}
           onClick={() => onSelect(emoji)}
           style={{
-            width: '48px',
-            height: '48px',
-            fontSize: '24px',
+            width: '100%',
+            aspectRatio: '1',
+            fontSize: '22px',
             borderRadius: theme.borderRadius.md,
             border: selected === emoji ? `3px solid ${theme.colors.primaryTeal}` : '2px solid transparent',
             background: selected === emoji ? `${theme.colors.primaryTeal}15` : theme.colors.lightGray,

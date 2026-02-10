@@ -1,20 +1,23 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmojiPicker } from '../components/ui/EmojiPicker';
+import { useTranslation } from '../i18n';
 import { theme } from '../utils/theme';
 import type { AgeGroup } from '../types';
 
 export function Join() {
   const navigate = useNavigate();
   const { actions, state } = useGame();
+  const { t, isRTL } = useTranslation();
 
   const [roomCode, setRoomCode] = useState(['', '', '', '']);
   const [name, setName] = useState('');
   const [age, setAge] = useState<AgeGroup>('adult');
+  const [kidAge, setKidAge] = useState<number>(8);
   const [avatar, setAvatar] = useState('😎');
   const [step, setStep] = useState<'code' | 'profile'>('code');
   const [error, setError] = useState('');
@@ -54,11 +57,12 @@ export function Join() {
       await actions.joinGame(roomCode.join(''), {
         name: name.trim(),
         age,
+        kidAge: age === 'kid' ? kidAge : null,
         avatarEmoji: avatar,
       });
       navigate('/lobby');
     } catch {
-      setError('Room not found. Check the code and try again.');
+      setError(t('join.roomNotFound'));
     }
   };
 
@@ -94,7 +98,7 @@ export function Join() {
             justifyContent: 'center',
           }}
         >
-          ←
+          {isRTL ? '→' : '←'}
         </motion.button>
         <h2
           style={{
@@ -104,7 +108,7 @@ export function Join() {
             color: theme.colors.white,
           }}
         >
-          Join Game
+          {t('join.title')}
         </h2>
       </div>
 
@@ -123,7 +127,7 @@ export function Join() {
                 marginBottom: '20px',
               }}
             >
-              Enter Room Code
+              {t('join.enterCode')}
             </p>
             <div
               style={{
@@ -182,7 +186,7 @@ export function Join() {
               disabled={!isCodeComplete}
               onClick={() => setStep('profile')}
             >
-              Next
+              {t('join.next')}
             </Button>
           </Card>
         </motion.div>
@@ -205,13 +209,13 @@ export function Join() {
                   marginBottom: '8px',
                 }}
               >
-                Your Name
+                {t('setup.yourName')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder={t('setup.enterName')}
                 maxLength={20}
                 style={{
                   width: '100%',
@@ -238,7 +242,7 @@ export function Join() {
                   marginBottom: '8px',
                 }}
               >
-                Age Group
+                {t('setup.ageGroup')}
               </label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 {(['kid', 'adult'] as AgeGroup[]).map((a) => (
@@ -259,11 +263,64 @@ export function Join() {
                       color: theme.colors.darkText,
                     }}
                   >
-                    {a === 'kid' ? '🧒 Kid' : '🧑 Adult'}
+                    {a === 'kid' ? `🧒 ${t('setup.kid')}` : `🧑 ${t('setup.adult')}`}
                   </motion.button>
                 ))}
               </div>
             </div>
+
+            <AnimatePresence>
+              {age === 'kid' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: 'hidden', marginBottom: '20px' }}
+                >
+                  <label
+                    style={{
+                      fontFamily: theme.fonts.display,
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      color: theme.colors.darkText,
+                      display: 'block',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    {t('setup.howOld')}
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {[6, 7, 8, 9, 10, 11, 12].map((a) => (
+                      <motion.button
+                        key={a}
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => setKidAge(a)}
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: theme.borderRadius.md,
+                          border: kidAge === a
+                            ? `2px solid ${theme.colors.primaryTeal}`
+                            : `2px solid ${theme.colors.lightGray}`,
+                          background: kidAge === a ? `${theme.colors.primaryTeal}15` : theme.colors.white,
+                          cursor: 'pointer',
+                          fontFamily: theme.fonts.display,
+                          fontWeight: 800,
+                          fontSize: '16px',
+                          color: kidAge === a ? theme.colors.primaryTeal : theme.colors.darkText,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {a}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div style={{ marginBottom: '24px' }}>
               <label
@@ -276,7 +333,7 @@ export function Join() {
                   marginBottom: '8px',
                 }}
               >
-                Choose Avatar
+                {t('setup.chooseAvatar')}
               </label>
               <EmojiPicker selected={avatar} onSelect={setAvatar} />
             </div>
@@ -288,7 +345,7 @@ export function Join() {
               disabled={!name.trim() || state.isLoading}
               onClick={handleJoin}
             >
-              {state.isLoading ? 'Joining...' : '🎮 Join Game'}
+              {state.isLoading ? t('join.joining') : `🎮 ${t('join.joinGame')}`}
             </Button>
           </Card>
         </motion.div>

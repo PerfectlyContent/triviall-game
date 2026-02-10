@@ -1,12 +1,17 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import type { Player, Question, GameState, GameSettings, GameStatus, RoundResult, AgeGroup } from '../types';
+import type { Player, Question, GameState, GameSettings, GameStatus, RoundResult, AgeGroup, Subject } from '../types';
 import { createDefaultGameState, createDefaultPlayer } from '../types';
 import { calculatePoints, adjustDifficulty } from '../utils/scoring';
 import { generateQuestion, getFallbackQuestion } from '../services/gemini';
 import { generateRoomCode } from '../utils/roomCode';
 import * as db from '../services/supabase';
+
+// Pick a random subject from the game's chosen subjects
+function pickRoundSubject(subjects: Subject[]): Subject {
+  return subjects[Math.floor(Math.random() * subjects.length)];
+}
 
 // --- Action types ---
 type GameAction =
@@ -25,7 +30,9 @@ type GameAction =
   | { type: 'SET_ROUND'; payload: number }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_MY_PLAYER_ID'; payload: string };
+  | { type: 'SET_MY_PLAYER_ID'; payload: string }
+  | { type: 'SET_ROUND_SUBJECT'; payload: Subject }
+  | { type: 'PLAY_AGAIN' };
 
 interface ContextState {
   game: GameState;
@@ -38,6 +45,32 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
   switch (action.type) {
     case 'RESET_GAME':
       return { ...state, game: createDefaultGameState(), myPlayerId: null, error: null };
+
+    case 'PLAY_AGAIN':
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          status: 'lobby' as GameStatus,
+          currentRound: 1,
+          currentRoundSubject: null,
+          currentPlayerTurnIndex: 0,
+          currentQuestion: null,
+          questionHistory: [],
+          roundResults: [],
+          players: state.game.players.map(p => ({
+            ...p,
+            score: 0,
+            streak: 0,
+            bestStreak: 0,
+            correctAnswers: 0,
+            totalAnswers: 0,
+            fastestAnswer: null,
+            isReady: false,
+          })),
+        },
+        error: null,
+      };
 
     case 'SET_GAME':
       return { ...state, game: action.payload };
@@ -112,6 +145,10 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
           ...state.game,
           currentPlayerTurnIndex: nextIndex,
           currentRound: isNewRound ? state.game.currentRound + 1 : state.game.currentRound,
+          // Pick a new subject when round changes; keep the current one otherwise
+          currentRoundSubject: isNewRound
+            ? pickRoundSubject(state.game.settings.subjects)
+            : state.game.currentRoundSubject,
           currentQuestion: null,
         },
       };
@@ -155,6 +192,12 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
     case 'SET_MY_PLAYER_ID':
       return { ...state, myPlayerId: action.payload };
 
+    case 'SET_ROUND_SUBJECT':
+      return {
+        ...state,
+        game: { ...state.game, currentRoundSubject: action.payload },
+      };
+
     default:
       return state;
   }
@@ -164,9 +207,9 @@ function gameReducer(state: ContextState, action: GameAction): ContextState {
 interface GameContextValue {
   state: ContextState;
   actions: {
-    createGame: (playerData: { name: string; age: AgeGroup; avatarEmoji: string }, settings: GameSettings) => Promise<string>;
-    joinGame: (roomCode: string, playerData: { name: string; age: AgeGroup; avatarEmoji: string }) => Promise<void>;
-    addLocalPlayer: (playerData: { name: string; age: AgeGroup; avatarEmoji: string }) => void;
+    createGame: (playerData: { name: string; age: AgeGroup; kidAge: number | null; avatarEmoji: string }, settings: GameSettings) => Promise<string>;
+    joinGame: (roomCode: string, playerData: { name: string; age: AgeGroup; kidAge: number | null; avatarEmoji: string }) => Promise<void>;
+    addLocalPlayer: (playerData: { name: string; age: AgeGroup; kidAge: number | null; avatarEmoji: string }) => void;
     removePlayer: (playerId: string) => void;
     updateSettings: (settings: Partial<GameSettings>) => void;
     setReady: (ready: boolean) => void;
@@ -176,7 +219,9 @@ interface GameContextValue {
     nextTurn: () => void;
     endGame: () => void;
     resetGame: () => void;
+    playAgain: () => void;
     getCurrentPlayer: () => Player | undefined;
+    setPlayerDifficulty: (playerId: string, difficulty: number) => void;
     isGameOver: () => boolean;
     isHost: () => boolean;
   };
@@ -237,6 +282,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       switch (eventType) {
         case 'game_start':
           dispatch({ type: 'SET_STATUS', payload: 'playing' });
+          if (payload.roundSubject) {
+            dispatch({ type: 'SET_ROUND_SUBJECT', payload: payload.roundSubject as Subject });
+          }
           dispatch({
             type: 'PREPARE_NEXT_TURN',
             payload: { turnIndex: payload.turnIndex as number, round: payload.round as number },
@@ -288,6 +336,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         case 'advance_turn': {
           const nextTurnIndex = payload.nextTurnIndex as number;
           const nextRound = payload.nextRound as number;
+          if (payload.roundSubject) {
+            dispatch({ type: 'SET_ROUND_SUBJECT', payload: payload.roundSubject as Subject });
+          }
           dispatch({
             type: 'PREPARE_NEXT_TURN',
             payload: { turnIndex: nextTurnIndex, round: nextRound },
@@ -323,7 +374,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }), []);
 
   const createGame = useCallback(async (
-    playerData: { name: string; age: AgeGroup; avatarEmoji: string },
+    playerData: { name: string; age: AgeGroup; kidAge: number | null; avatarEmoji: string },
     settings: GameSettings,
   ): Promise<string> => {
     const gameId = uuidv4();
@@ -334,6 +385,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       id: playerId,
       name: playerData.name,
       age: playerData.age,
+      kidAge: playerData.kidAge,
       avatarEmoji: playerData.avatarEmoji,
       difficulty: settings.defaultDifficulty,
       isHost: true,
@@ -383,7 +435,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const joinGame = useCallback(async (
     roomCode: string,
-    playerData: { name: string; age: AgeGroup; avatarEmoji: string },
+    playerData: { name: string; age: AgeGroup; kidAge: number | null; avatarEmoji: string },
   ) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
@@ -418,6 +470,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         settings: game.settings as GameSettings,
         players: mappedPlayers,
         currentRound: game.current_round || 1,
+        currentRoundSubject: null,
         currentPlayerTurnIndex: 0,
         currentQuestion: game.current_question as Question | null,
         questionHistory: [],
@@ -446,11 +499,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setupRealtimeCallbacks]);
 
-  const addLocalPlayer = useCallback((playerData: { name: string; age: AgeGroup; avatarEmoji: string }) => {
+  const addLocalPlayer = useCallback((playerData: { name: string; age: AgeGroup; kidAge: number | null; avatarEmoji: string }) => {
     const player = createDefaultPlayer({
       id: uuidv4(),
       name: playerData.name,
       age: playerData.age,
+      kidAge: playerData.kidAge,
       avatarEmoji: playerData.avatarEmoji,
       difficulty: state.game.settings.defaultDifficulty,
     });
@@ -488,9 +542,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const startGame = useCallback(() => {
     const s = stateRef.current;
 
+    // Pick the subject for the first round
+    const firstSubject = pickRoundSubject(s.game.settings.subjects);
+
     // Local dispatches
     dispatch({ type: 'SET_STATUS', payload: 'playing' });
     dispatch({ type: 'SET_ROUND', payload: 1 });
+    dispatch({ type: 'SET_ROUND_SUBJECT', payload: firstSubject });
     dispatch({ type: 'PREPARE_NEXT_TURN', payload: { turnIndex: 0, round: 1 } });
 
     if (s.game.settings.mode === 'online') {
@@ -500,6 +558,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           senderId: s.myPlayerId,
           turnIndex: 0,
           round: 1,
+          roundSubject: firstSubject,
         });
       }
       // DB write (persistence only, fire-and-forget)
@@ -538,8 +597,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const currentPlayer = s.game.players[turnIndex];
     if (!currentPlayer) return;
 
-    const subjects = s.game.settings.subjects;
-    const subject = subjects[Math.floor(Math.random() * subjects.length)];
+    // Use the round's subject (same subject for all players in a round)
+    const subject = s.game.currentRoundSubject ?? pickRoundSubject(s.game.settings.subjects);
 
     let question;
     try {
@@ -547,7 +606,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         subject,
         difficulty: currentPlayer.difficulty,
         age: currentPlayer.age,
+        kidAge: currentPlayer.kidAge,
         previousQuestions: s.game.questionHistory,
+        language: s.game.settings.language,
       });
     } catch (err) {
       console.warn('[loadQuestion] Gemini failed, using fallback:', err);
@@ -644,6 +705,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const isNewRound = nextIndex === 0;
     const nextRound = isNewRound ? s.game.currentRound + 1 : s.game.currentRound;
 
+    // Pick a new subject when a new round starts
+    const nextSubject = isNewRound
+      ? pickRoundSubject(s.game.settings.subjects)
+      : s.game.currentRoundSubject;
+
+    if (isNewRound && nextSubject) {
+      dispatch({ type: 'SET_ROUND_SUBJECT', payload: nextSubject });
+    }
+
     if (s.game.settings.mode === 'online') {
       // Dispatch locally: prepare for next turn (question = null while host generates)
       dispatch({ type: 'PREPARE_NEXT_TURN', payload: { turnIndex: nextIndex, round: nextRound } });
@@ -654,6 +724,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           senderId: s.myPlayerId,
           nextTurnIndex: nextIndex,
           nextRound: nextRound,
+          ...(isNewRound && nextSubject ? { roundSubject: nextSubject } : {}),
         });
       }
       // DB write (persistence, fire-and-forget)
@@ -703,6 +774,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'RESET_GAME' });
   }, []);
 
+  const playAgain = useCallback(() => {
+    dispatch({ type: 'PLAY_AGAIN' });
+  }, []);
+
+  const setPlayerDifficulty = useCallback((playerId: string, difficulty: number) => {
+    const clamped = Math.max(1, Math.min(10, difficulty));
+    dispatch({ type: 'UPDATE_PLAYER', payload: { id: playerId, updates: { difficulty: clamped } } });
+  }, []);
+
   const getCurrentPlayer = useCallback(() => {
     return stateRef.current.game.players[stateRef.current.game.currentPlayerTurnIndex];
   }, []);
@@ -722,6 +802,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       nextTurn,
       endGame,
       resetGame,
+      playAgain,
+      setPlayerDifficulty,
       getCurrentPlayer,
       isGameOver,
       isHost: amIHost,

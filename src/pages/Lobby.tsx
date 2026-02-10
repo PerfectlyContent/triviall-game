@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card';
 import { GlassCard } from '../components/ui/Card';
 import { EmojiPicker } from '../components/ui/EmojiPicker';
 import { PlayerCard } from '../components/game/PlayerCard';
+import { useTranslation } from '../i18n';
 import { theme } from '../utils/theme';
 import type { AgeGroup } from '../types';
 
@@ -14,9 +15,11 @@ export function Lobby() {
   const navigate = useNavigate();
   const { state, actions } = useGame();
   const { game } = state;
+  const { t, isRTL } = useTranslation();
 
   const [addName, setAddName] = useState('');
   const [addAge, setAddAge] = useState<AgeGroup>('adult');
+  const [addKidAge, setAddKidAge] = useState<number>(8);
   const [addAvatar, setAddAvatar] = useState('😎');
   const [showAddForm, setShowAddForm] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -39,6 +42,7 @@ export function Lobby() {
     actions.addLocalPlayer({
       name: addName.trim(),
       age: addAge,
+      kidAge: addAge === 'kid' ? addKidAge : null,
       avatarEmoji: addAvatar,
     });
     setAddName('');
@@ -87,7 +91,7 @@ export function Lobby() {
             justifyContent: 'center',
           }}
         >
-          ←
+          {isRTL ? '→' : '←'}
         </motion.button>
         <h2
           style={{
@@ -97,7 +101,7 @@ export function Lobby() {
             color: theme.colors.white,
           }}
         >
-          Game Lobby
+          {t('lobby.title')}
         </h2>
       </div>
 
@@ -113,7 +117,7 @@ export function Lobby() {
               marginBottom: '8px',
             }}
           >
-            Share this code with friends
+            {t('lobby.shareCode')}
           </p>
           <div
             style={{
@@ -142,7 +146,7 @@ export function Lobby() {
               cursor: 'pointer',
             }}
           >
-            {copied ? '✓ Copied!' : '📋 Copy Code'}
+            {copied ? `✓ ${t('lobby.copied')}` : `📋 ${t('lobby.copyCode')}`}
           </motion.button>
         </GlassCard>
       )}
@@ -157,9 +161,9 @@ export function Lobby() {
         }}
       >
         {[
-          `${game.settings.rounds} rounds`,
-          `${game.settings.subjects.length} subjects`,
-          game.settings.mode === 'local' ? 'Same Device' : 'Online',
+          `${game.settings.rounds} ${t('lobby.rounds')}`,
+          `${game.settings.subjects.length} ${t('lobby.subjects')}`,
+          game.settings.mode === 'local' ? t('lobby.sameDevice') : t('lobby.online'),
         ].map((tag) => (
           <span
             key={tag}
@@ -189,7 +193,7 @@ export function Lobby() {
             marginBottom: '12px',
           }}
         >
-          Players ({game.players.length})
+          {t('lobby.players')} ({game.players.length})
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <AnimatePresence>
@@ -230,7 +234,7 @@ export function Lobby() {
                 marginBottom: '20px',
               }}
             >
-              + Add Player
+              {t('lobby.addPlayer')}
             </motion.button>
           ) : (
             <Card style={{ marginBottom: '20px' }}>
@@ -239,7 +243,7 @@ export function Lobby() {
                   type="text"
                   value={addName}
                   onChange={(e) => setAddName(e.target.value)}
-                  placeholder="Player name"
+                  placeholder={t('lobby.playerName')}
                   maxLength={20}
                   autoFocus
                   style={{
@@ -274,10 +278,62 @@ export function Lobby() {
                       color: theme.colors.darkText,
                     }}
                   >
-                    {a === 'kid' ? '🧒 Kid' : '🧑 Adult'}
+                    {a === 'kid' ? `🧒 ${t('setup.kid')}` : `🧑 ${t('setup.adult')}`}
                   </motion.button>
                 ))}
               </div>
+              <AnimatePresence>
+                {addAge === 'kid' && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ overflow: 'hidden', marginBottom: '12px' }}
+                  >
+                    <label
+                      style={{
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        color: theme.colors.darkText,
+                        display: 'block',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      {t('lobby.age')}
+                    </label>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                      {[6, 7, 8, 9, 10, 11, 12].map((a) => (
+                        <motion.button
+                          key={a}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => setAddKidAge(a)}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: theme.borderRadius.md,
+                            border: addKidAge === a
+                              ? `2px solid ${theme.colors.primaryTeal}`
+                              : `2px solid ${theme.colors.lightGray}`,
+                            background: addKidAge === a ? `${theme.colors.primaryTeal}15` : theme.colors.white,
+                            cursor: 'pointer',
+                            fontFamily: theme.fonts.display,
+                            fontWeight: 800,
+                            fontSize: '14px',
+                            color: addKidAge === a ? theme.colors.primaryTeal : theme.colors.darkText,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {a}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div style={{ marginBottom: '14px' }}>
                 <EmojiPicker selected={addAvatar} onSelect={setAddAvatar} />
               </div>
@@ -287,7 +343,7 @@ export function Lobby() {
                   fullWidth
                   onClick={() => setShowAddForm(false)}
                 >
-                  Cancel
+                  {t('lobby.cancel')}
                 </Button>
                 <Button
                   variant="primary"
@@ -295,7 +351,7 @@ export function Lobby() {
                   disabled={!addName.trim()}
                   onClick={handleAddPlayer}
                 >
-                  Add
+                  {t('lobby.add')}
                 </Button>
               </div>
             </Card>
@@ -315,7 +371,7 @@ export function Lobby() {
             color: 'rgba(255,255,255,0.7)',
           }}
         >
-          Waiting for host to start the game...
+          {t('lobby.waitingHost')}
         </div>
       ) : (
         <Button
@@ -325,7 +381,7 @@ export function Lobby() {
           disabled={!canStart}
           onClick={handleStart}
         >
-          {canStart ? '🚀 Start Game' : 'Need at least 2 players'}
+          {canStart ? `🚀 ${t('lobby.startGame')}` : t('lobby.needPlayers')}
         </Button>
       )}
     </div>

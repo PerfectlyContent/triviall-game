@@ -3,6 +3,17 @@ export type GameStatus = 'lobby' | 'playing' | 'finished';
 export type AgeGroup = 'kid' | 'adult';
 export type QuestionType = 'multiple_choice' | 'true_false' | 'complete_phrase' | 'estimation';
 
+export type Language = 'en' | 'he' | 'ru' | 'de' | 'pl' | 'es';
+
+export const LANGUAGES: { code: Language; nativeName: string; flag: string; rtl: boolean }[] = [
+  { code: 'en', nativeName: 'English', flag: '🇺🇸', rtl: false },
+  { code: 'he', nativeName: 'עברית', flag: '🇮🇱', rtl: true },
+  { code: 'ru', nativeName: 'Русский', flag: '🇷🇺', rtl: false },
+  { code: 'de', nativeName: 'Deutsch', flag: '🇩🇪', rtl: false },
+  { code: 'pl', nativeName: 'Polski', flag: '🇵🇱', rtl: false },
+  { code: 'es', nativeName: 'Español', flag: '🇪🇸', rtl: false },
+];
+
 export type Subject =
   | 'Science' | 'History' | 'Gaming' | 'Movies' | 'Music'
   | 'Sports' | 'Nature' | 'Food' | 'Travel' | 'Pop Culture'
@@ -22,6 +33,7 @@ export interface Player {
   id: string;
   name: string;
   age: AgeGroup;
+  kidAge: number | null; // 6-12 when age === 'kid', null for adults
   avatarEmoji: string;
   difficulty: number;
   score: number;
@@ -52,6 +64,7 @@ export interface GameSettings {
   subjects: Subject[];
   rounds: 3 | 5 | 10;
   defaultDifficulty: number;
+  language: Language;
 }
 
 export interface RoundResult {
@@ -72,6 +85,7 @@ export interface GameState {
   settings: GameSettings;
   players: Player[];
   currentRound: number;
+  currentRoundSubject: Subject | null;
   currentPlayerTurnIndex: number;
   currentQuestion: Question | null;
   questionHistory: string[];
@@ -91,6 +105,7 @@ export function createDefaultPlayer(overrides: Partial<Player> = {}): Player {
     id: '',
     name: '',
     age: 'adult',
+    kidAge: null,
     avatarEmoji: '😀',
     difficulty: 5,
     score: 0,
@@ -117,9 +132,11 @@ export function createDefaultGameState(): GameState {
       subjects: [...ALL_SUBJECTS],
       rounds: 5,
       defaultDifficulty: 5,
+      language: 'en',
     },
     players: [],
     currentRound: 1,
+    currentRoundSubject: null,
     currentPlayerTurnIndex: 0,
     currentQuestion: null,
     questionHistory: [],

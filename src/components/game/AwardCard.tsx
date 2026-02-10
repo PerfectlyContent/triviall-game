@@ -1,5 +1,8 @@
 import { motion } from 'framer-motion';
 import type { Award } from '../../types';
+import type { Language } from '../../types';
+import { translations } from '../../i18n/translations';
+import type { TranslationKey } from '../../i18n/translations';
 import { theme } from '../../utils/theme';
 
 interface AwardCardProps {
@@ -62,7 +65,13 @@ export function AwardCard({ award, delay = 0 }: AwardCardProps) {
   );
 }
 
-export function computeAwards(players: import('../../types').Player[]): Award[] {
+export function computeAwards(players: import('../../types').Player[], language: Language = 'en'): Award[] {
+  const t = (key: TranslationKey, params?: Record<string, string | number>) => {
+    let s = translations[language]?.[key] ?? translations.en[key] ?? key;
+    if (params) for (const [k, v] of Object.entries(params)) s = s.replace('{' + k + '}', String(v));
+    return s;
+  };
+
   if (players.length === 0) return [];
 
   const awards: Award[] = [];
@@ -71,11 +80,11 @@ export function computeAwards(players: import('../../types').Player[]): Award[] 
   const streakPlayer = [...players].sort((a, b) => b.bestStreak - a.bestStreak)[0];
   if (streakPlayer.bestStreak > 0) {
     awards.push({
-      title: 'Hottest Streak',
-      description: 'Longest answer streak',
+      title: t('award.hottestStreak'),
+      description: t('award.longestStreak'),
       emoji: '🔥',
       playerName: streakPlayer.name,
-      value: `${streakPlayer.bestStreak} in a row`,
+      value: t('award.inARow', { n: streakPlayer.bestStreak }),
     });
   }
 
@@ -86,11 +95,11 @@ export function computeAwards(players: import('../../types').Player[]): Award[] 
   if (accuracyPlayer) {
     const pct = Math.round((accuracyPlayer.correctAnswers / accuracyPlayer.totalAnswers) * 100);
     awards.push({
-      title: 'Sharpshooter',
-      description: 'Highest accuracy',
+      title: t('award.sharpshooter'),
+      description: t('award.highestAccuracy'),
       emoji: '🎯',
       playerName: accuracyPlayer.name,
-      value: `${pct}% accuracy`,
+      value: t('award.accuracyValue', { n: pct }),
     });
   }
 
@@ -100,11 +109,11 @@ export function computeAwards(players: import('../../types').Player[]): Award[] 
     .sort((a, b) => (a.fastestAnswer ?? Infinity) - (b.fastestAnswer ?? Infinity))[0];
   if (speedPlayer && speedPlayer.fastestAnswer !== null) {
     awards.push({
-      title: 'Speed Demon',
-      description: 'Fastest correct answer',
+      title: t('award.speedDemon'),
+      description: t('award.fastestAnswer'),
       emoji: '⚡',
       playerName: speedPlayer.name,
-      value: `${speedPlayer.fastestAnswer.toFixed(1)}s`,
+      value: t('award.speedValue', { n: speedPlayer.fastestAnswer.toFixed(1) }),
     });
   }
 

@@ -3,12 +3,23 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import { QuestionCard } from '../components/game/QuestionCard';
-import { Timer } from '../components/ui/Timer';
-import { Spinner } from '../components/ui/Spinner';
-import { Button } from '../components/ui/Button';
+import { TimerBar } from '../components/ui/TimerBar';
 import { confettiBurst } from '../components/ui/Confetti';
 import { correctFeedback, incorrectFeedback, streakFeedback } from '../utils/feedback';
+import { getResultMessage } from '../utils/resultMessages';
+import { getRandomFunFact } from '../utils/funFacts';
+import { useTranslation } from '../i18n';
+import { useLanguage } from '../App';
 import { theme } from '../utils/theme';
+import type { TranslationKey } from '../i18n/translations';
+import type { Subject } from '../types';
+
+const SUBJECT_TRANSLATION_KEYS: Record<Subject, TranslationKey> = {
+  'Science': 'subject.Science', 'History': 'subject.History', 'Gaming': 'subject.Gaming',
+  'Movies': 'subject.Movies', 'Music': 'subject.Music', 'Sports': 'subject.Sports',
+  'Nature': 'subject.Nature', 'Food': 'subject.Food', 'Travel': 'subject.Travel',
+  'Pop Culture': 'subject.PopCulture', 'Art': 'subject.Art', 'Tech': 'subject.Tech',
+};
 
 type Phase = 'loading' | 'turn-intro' | 'question' | 'result';
 
@@ -19,6 +30,8 @@ export function Round() {
   const navigate = useNavigate();
   const { state, actions } = useGame();
   const { game } = state;
+  const { t, isRTL } = useTranslation();
+  const { language } = useLanguage();
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -31,6 +44,8 @@ export function Round() {
   } | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
   const [pointsAnimation, setPointsAnimation] = useState<number | null>(null);
+  const [resultMessage, setResultMessage] = useState<{ emoji: string; text: string } | null>(null);
+  const [funFact, setFunFact] = useState<string>('');
   const answerTimeRef = useRef<number>(0);
 
   const currentPlayer = actions.getCurrentPlayer();
@@ -49,9 +64,19 @@ export function Round() {
     setSelectedAnswer(null);
     setResult(null);
     setPointsAnimation(null);
+    setResultMessage(null);
     setTimerRunning(false);
     iAnsweredRef.current = false;
   }, []);
+
+  // ============================
+  // FUN FACT during loading
+  // ============================
+  useEffect(() => {
+    if (phase !== 'loading') return;
+    // Pick one fact per loading screen — no rotation
+    setFunFact(getRandomFunFact(game.currentRoundSubject, language));
+  }, [phase, game.currentRoundSubject]);
 
   // ============================
   // LOADING PHASE (local mode only)
@@ -143,6 +168,7 @@ export function Round() {
           explanation: game.currentQuestion?.explanation ?? '',
         });
         setSelectedAnswer(latestResult.answer ?? '__other__');
+        setResultMessage(getResultMessage(latestResult.isCorrect, 1, false, language));
         setTimeout(() => setPhase('result'), 300);
       }
     }
@@ -161,6 +187,7 @@ export function Round() {
 
     const answerResult = actions.submitAnswer(answer, timeElapsed);
     setResult(answerResult);
+    setResultMessage(getResultMessage(answerResult.isCorrect, answerResult.multiplier, false, language));
 
     if (answerResult.isCorrect) {
       correctFeedback();
@@ -189,6 +216,7 @@ export function Round() {
 
     const answerResult = actions.submitAnswer('__timeout__', game.currentQuestion?.timeLimit ?? 20);
     setResult(answerResult);
+    setResultMessage(getResultMessage(false, 1, true, language));
     incorrectFeedback();
 
     setTimeout(() => setPhase('result'), 800);
@@ -253,9 +281,9 @@ export function Round() {
   }
 
   const getLoadingMessage = () => {
-    if (!isOnline) return 'Generating question...';
-    if (isMyTurn) return 'Generating your question...';
-    return `Waiting for ${currentPlayer.name}'s turn...`;
+    if (!isOnline) return t('round.generating');
+    if (isMyTurn) return t('round.generatingYours');
+    return t('round.waitingFor', { name: currentPlayer.name });
   };
 
   return (
@@ -263,134 +291,105 @@ export function Round() {
       style={{
         minHeight: '100vh',
         background: getBackgroundGradient(),
-        padding: '20px',
+        padding: '16px',
         position: 'relative',
         transition: 'background 0.5s ease',
       }}
     >
-      {/* Top Bar */}
+      {/* Top Bar: Round + Player Turn + Subject — single compact row */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '16px',
+          marginBottom: '8px',
         }}
       >
         <div
           style={{
             fontFamily: theme.fonts.display,
             fontWeight: 800,
-            fontSize: '14px',
-            color: theme.colors.white,
+            fontSize: '12px',
+            color: 'rgba(255,255,255,0.8)',
             textTransform: 'uppercase',
             letterSpacing: '1px',
           }}
         >
-          Round {Math.min(game.currentRound, game.settings.rounds)}/{game.settings.rounds}
+          {t('round.round')} {Math.min(game.currentRound, game.settings.rounds)}/{game.settings.rounds}
         </div>
 
-        {phase === 'question' && game.currentQuestion && isMyTurn && (
-          <Timer
-            duration={game.currentQuestion.timeLimit}
-            onTimeout={handleTimeout}
-            isRunning={timerRunning}
-            size={52}
-          />
-        )}
-      </div>
-
-      {/* Player turn indicator */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          marginBottom: '16px',
-        }}
-      >
+        {/* Current player pill */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '6px',
             background: 'rgba(255,255,255,0.15)',
             borderRadius: theme.borderRadius.full,
-            padding: '6px 16px',
+            padding: '4px 12px',
           }}
         >
-          <span style={{ fontSize: '20px' }}>{currentPlayer.avatarEmoji}</span>
+          <span style={{ fontSize: '16px' }}>{currentPlayer.avatarEmoji}</span>
           <span
             style={{
               fontFamily: theme.fonts.display,
               fontWeight: 700,
-              fontSize: '14px',
+              fontSize: '13px',
               color: theme.colors.white,
             }}
           >
-            {isMyTurn ? 'Your Turn' : `${currentPlayer.name}'s Turn`}
+            {isOnline && isMyTurn ? t('round.yourTurn') : currentPlayer.name}
           </span>
         </div>
+
+        {/* Current round subject */}
+        {game.currentRoundSubject ? (
+          <div
+            style={{
+              fontFamily: theme.fonts.display,
+              fontWeight: 700,
+              fontSize: '12px',
+              color: theme.colors.white,
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: theme.borderRadius.full,
+              padding: '3px 10px',
+            }}
+          >
+            {t(SUBJECT_TRANSLATION_KEYS[game.currentRoundSubject])}
+          </div>
+        ) : <div />}
       </div>
 
-      {/* Lives */}
+      {/* Standings — correct answers per player */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
-          gap: '4px',
-          marginBottom: '20px',
+          gap: '10px',
+          marginBottom: '10px',
+          flexWrap: 'wrap',
         }}
       >
-        {Array.from({ length: 3 }, (_, i) => (
-          <span key={i} style={{ fontSize: '18px', opacity: i < currentPlayer.lives ? 1 : 0.3 }}>
-            ❤️
-          </span>
-        ))}
-      </div>
-
-      {/* Score & Streak */}
-      {(() => {
-        const displayPlayer = isOnline && myPlayer ? myPlayer : currentPlayer;
-        return (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '16px',
-              marginBottom: '20px',
-            }}
-          >
+        {game.players.map((p) => {
+          const isActive = p.id === currentPlayer.id;
+          const isMe = isOnline && p.id === state.myPlayerId;
+          return (
             <span
+              key={p.id}
               style={{
                 fontFamily: theme.fonts.display,
-                fontWeight: 700,
-                fontSize: '14px',
-                color: 'rgba(255,255,255,0.8)',
+                fontWeight: isActive ? 800 : 600,
+                fontSize: '12px',
+                color: isActive || isMe ? theme.colors.white : 'rgba(255,255,255,0.6)',
               }}
             >
-              {displayPlayer.score} pts
+              {p.avatarEmoji} {p.correctAnswers}✓
             </span>
-            {displayPlayer.streak >= 2 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                style={{
-                  fontFamily: theme.fonts.display,
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  color: theme.colors.brightYellow,
-                }}
-              >
-                🔥 {displayPlayer.streak} streak
-              </motion.span>
-            )}
-          </div>
-        );
-      })()}
+          );
+        })}
+      </div>
 
-      {/* Main Content */}
+      {/* Main Content — pushed down slightly for breathing room */}
       <AnimatePresence mode="wait">
         {/* Loading */}
         {phase === 'loading' && (
@@ -404,22 +403,108 @@ export function Round() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '300px',
-              gap: '16px',
+              minHeight: '70vh',
+              gap: '0',
+              padding: '0 8px',
             }}
           >
-            <Spinner size={48} />
+            {/* Big subject emoji with pulse */}
+            <motion.div
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ fontSize: '64px', marginBottom: '12px' }}
+            >
+              {game.currentRoundSubject ? theme.subjectEmojis[game.currentRoundSubject] : '🧠'}
+            </motion.div>
+
+            {/* Loading message with animated dots */}
             <p
               style={{
-                fontFamily: theme.fonts.body,
+                fontFamily: theme.fonts.display,
                 fontWeight: 700,
                 fontSize: '16px',
                 color: theme.colors.white,
                 textAlign: 'center',
+                marginBottom: '32px',
               }}
             >
               {getLoadingMessage()}
             </p>
+
+            {/* Fun fact card — white frosted glass */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={funFact}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  borderRadius: theme.borderRadius.lg,
+                  padding: '24px 24px 20px',
+                  maxWidth: '360px',
+                  width: '100%',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: theme.gradients.yellow,
+                    borderRadius: '50px',
+                    padding: '4px 14px',
+                    marginBottom: '14px',
+                  }}
+                >
+                  <span style={{ fontSize: '14px' }}>💡</span>
+                  <span
+                    style={{
+                      fontFamily: theme.fonts.display,
+                      fontWeight: 800,
+                      fontSize: '11px',
+                      color: theme.colors.darkText,
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
+                    }}
+                  >
+                    {t('round.didYouKnow')}
+                  </span>
+                </div>
+                <p
+                  style={{
+                    fontFamily: theme.fonts.body,
+                    fontWeight: 700,
+                    fontSize: '16px',
+                    color: theme.colors.darkText,
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}
+                >
+                  {funFact}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Three bouncing dots loader */}
+            <div style={{ display: 'flex', gap: '6px', marginTop: '28px' }}>
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.6)',
+                  }}
+                />
+              ))}
+            </div>
           </motion.div>
         )}
 
@@ -427,40 +512,102 @@ export function Round() {
         {phase === 'turn-intro' && (
           <motion.div
             key="intro"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '300px',
-              gap: '12px',
+              minHeight: '70vh',
+              gap: '0',
             }}
           >
-            <span style={{ fontSize: '64px' }}>{currentPlayer.avatarEmoji}</span>
-            <h2
+            {/* Avatar with glow ring */}
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+              style={{
+                width: '100px',
+                height: '100px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.2)',
+                boxShadow: '0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '56px',
+                marginBottom: '20px',
+              }}
+            >
+              {currentPlayer.avatarEmoji}
+            </motion.div>
+
+            {/* Player name */}
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
               style={{
                 fontFamily: theme.fonts.display,
                 fontWeight: 900,
-                fontSize: '28px',
+                fontSize: '32px',
                 color: theme.colors.white,
                 textAlign: 'center',
+                margin: '0 0 6px',
               }}
             >
-              {isMyTurn ? '🎯 Your Turn!' : `🎯 ${currentPlayer.name}'s Turn`}
-            </h2>
-            <p
+              {isOnline && isMyTurn ? t('round.yourTurnIntro') : t('round.playerTurn', { name: currentPlayer.name })}
+            </motion.h2>
+
+            {/* Get ready text */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
               style={{
                 fontFamily: theme.fonts.body,
                 fontWeight: 600,
-                fontSize: '16px',
-                color: 'rgba(255,255,255,0.7)',
+                fontSize: '15px',
+                color: 'rgba(255,255,255,0.6)',
+                margin: '0 0 28px',
               }}
             >
-              {isMyTurn ? 'Get ready!' : 'Watch and wait...'}
-            </p>
+              {isOnline && !isMyTurn ? t('round.watchWait') : t('round.getReady')}
+            </motion.p>
+
+            {/* Subject card */}
+            {game.currentRoundSubject && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.4, duration: 0.4 }}
+                style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  borderRadius: theme.borderRadius.lg,
+                  padding: '20px 32px',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                }}
+              >
+                <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>
+                  {theme.subjectEmojis[game.currentRoundSubject]}
+                </span>
+                <p
+                  style={{
+                    fontFamily: theme.fonts.display,
+                    fontWeight: 800,
+                    fontSize: '18px',
+                    color: theme.colors.darkText,
+                    margin: 0,
+                  }}
+                >
+                  {t(SUBJECT_TRANSLATION_KEYS[game.currentRoundSubject!])}
+                </p>
+              </motion.div>
+            )}
           </motion.div>
         )}
 
@@ -502,9 +649,18 @@ export function Round() {
                     textAlign: 'center',
                   }}
                 >
-                  {currentPlayer.name} is answering...
+                  {t('round.isAnswering', { name: currentPlayer.name })}
                 </p>
               </div>
+            )}
+
+            {/* Timer bar */}
+            {phase === 'question' && isMyTurn && (
+              <TimerBar
+                duration={game.currentQuestion.timeLimit}
+                onTimeout={handleTimeout}
+                isRunning={timerRunning}
+              />
             )}
 
             <QuestionCard
@@ -545,24 +701,15 @@ export function Round() {
             {/* Result feedback */}
             {phase === 'result' && result && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                style={{ marginTop: '20px' }}
+                transition={{ delay: 0.2 }}
+                style={{ marginTop: '16px', textAlign: 'center' }}
               >
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: '16px',
-                    borderRadius: theme.borderRadius.lg,
-                    background: result.isCorrect
-                      ? 'rgba(0, 217, 165, 0.2)'
-                      : 'rgba(255, 107, 138, 0.2)',
-                    marginBottom: '16px',
-                  }}
-                >
-                  <span style={{ fontSize: '32px' }}>
-                    {result.isCorrect ? '🎉' : '😅'}
+                {/* Feedback text — no box, just centered text */}
+                <div style={{ marginBottom: '12px' }}>
+                  <span style={{ fontSize: '28px' }}>
+                    {resultMessage?.emoji ?? (result.isCorrect ? '🎉' : '😅')}
                   </span>
                   <p
                     style={{
@@ -570,41 +717,131 @@ export function Round() {
                       fontWeight: 800,
                       fontSize: '18px',
                       color: theme.colors.white,
-                      marginTop: '4px',
+                      margin: '4px 0 0',
                     }}
                   >
-                    {result.isCorrect
-                      ? result.multiplier > 1
-                        ? `Amazing! ${result.multiplier}x streak!`
-                        : 'Correct!'
-                      : 'Not quite!'}
+                    {resultMessage?.text ?? (result.isCorrect ? t('round.correct') : t('round.notQuite'))}
                   </p>
                 </div>
 
-                {/* LOCAL MODE: show Continue button (pass-and-play needs manual advance) */}
-                {/* ONLINE MODE: auto-advances after 3 seconds — show a countdown hint */}
-                {isOnline ? (
+                {/* Difficulty adjuster — small centered pill */}
+                {isMyTurn && (
                   <div
                     style={{
-                      textAlign: 'center',
-                      padding: '12px',
-                      fontFamily: theme.fonts.body,
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      color: 'rgba(255,255,255,0.6)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '14px',
+                      padding: '6px 14px',
+                      borderRadius: '50px',
+                      background: 'rgba(255,255,255,0.12)',
                     }}
                   >
-                    Next turn in a moment...
+                    <span
+                      style={{
+                        fontFamily: theme.fonts.body,
+                        fontWeight: 600,
+                        fontSize: '11px',
+                        color: 'rgba(255,255,255,0.5)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      {t('round.difficulty')}
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => actions.setPlayerDifficulty(currentPlayer.id, currentPlayer.difficulty - 1)}
+                      disabled={currentPlayer.difficulty <= 1}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: 'rgba(255,255,255,0.2)',
+                        color: theme.colors.white,
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: currentPlayer.difficulty <= 1 ? 'default' : 'pointer',
+                        opacity: currentPlayer.difficulty <= 1 ? 0.3 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      −
+                    </motion.button>
+                    <span
+                      style={{
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 800,
+                        fontSize: '14px',
+                        color: theme.colors.white,
+                        minWidth: '16px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {currentPlayer.difficulty}
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => actions.setPlayerDifficulty(currentPlayer.id, currentPlayer.difficulty + 1)}
+                      disabled={currentPlayer.difficulty >= 10}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: 'rgba(255,255,255,0.2)',
+                        color: theme.colors.white,
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: currentPlayer.difficulty >= 10 ? 'default' : 'pointer',
+                        opacity: currentPlayer.difficulty >= 10 ? 0.3 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      +
+                    </motion.button>
                   </div>
-                ) : (
-                  <Button
-                    variant="coral"
-                    size="lg"
-                    fullWidth
-                    onClick={handleContinue}
+                )}
+
+                {/* Continue / auto-advance */}
+                {isOnline ? (
+                  <p
+                    style={{
+                      fontFamily: theme.fonts.body,
+                      fontWeight: 600,
+                      fontSize: '13px',
+                      color: 'rgba(255,255,255,0.5)',
+                      margin: 0,
+                    }}
                   >
-                    {actions.isGameOver() ? '🏆 See Results' : '➡️ Continue'}
-                  </Button>
+                    {t('round.nextTurn')}
+                  </p>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleContinue}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: '50px',
+                      border: 'none',
+                      background: theme.colors.white,
+                      color: theme.colors.darkText,
+                      fontFamily: theme.fonts.display,
+                      fontWeight: 800,
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    {actions.isGameOver() ? `🏆 ${t('round.seeResults')}` : `${t('round.continue')} ${isRTL ? '←' : '→'}`}
+                  </motion.button>
                 )}
               </motion.div>
             )}

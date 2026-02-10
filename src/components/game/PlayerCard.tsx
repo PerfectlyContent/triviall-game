@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import type { Player } from '../../types';
+import { useTranslation } from '../../i18n';
 import { theme } from '../../utils/theme';
 
 interface PlayerCardProps {
@@ -12,6 +13,7 @@ interface PlayerCardProps {
 }
 
 export function PlayerCard({ player, isActive = false, showScore = false, showReady = false, onRemove, rank }: PlayerCardProps) {
+  const { t } = useTranslation();
   return (
     <motion.div
       layout
@@ -84,7 +86,7 @@ export function PlayerCard({ player, isActive = false, showScore = false, showRe
                 fontWeight: 800,
               }}
             >
-              HOST
+              {t('player.host')}
             </span>
           )}
           {player.age === 'kid' && (
@@ -98,7 +100,7 @@ export function PlayerCard({ player, isActive = false, showScore = false, showRe
                 fontWeight: 800,
               }}
             >
-              KID
+              {t('player.kid')}
             </span>
           )}
         </div>
@@ -114,7 +116,7 @@ export function PlayerCard({ player, isActive = false, showScore = false, showRe
               gap: '8px',
             }}
           >
-            <span>{player.score} pts</span>
+            <span>{player.score} {t('results.pts')}</span>
             {player.streak >= 2 && (
               <span style={{ color: theme.colors.orange }}>
                 🔥 {player.streak}

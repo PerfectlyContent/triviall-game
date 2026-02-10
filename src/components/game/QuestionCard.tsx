@@ -1,7 +1,24 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Question } from '../../types';
+import type { Question, Subject } from '../../types';
+import type { TranslationKey } from '../../i18n/translations';
+import { useTranslation } from '../../i18n';
 import { theme } from '../../utils/theme';
+
+const SUBJECT_TRANSLATION_KEYS: Record<Subject, TranslationKey> = {
+  Science: 'subject.Science',
+  History: 'subject.History',
+  Geography: 'subject.Geography',
+  Sports: 'subject.Sports',
+  Music: 'subject.Music',
+  Movies: 'subject.Movies',
+  Nature: 'subject.Nature',
+  Food: 'subject.Food',
+  Technology: 'subject.Technology',
+  Literature: 'subject.Literature',
+  Art: 'subject.Art',
+  'General Knowledge': 'subject.GeneralKnowledge',
+};
 
 interface QuestionCardProps {
   question: Question;
@@ -12,6 +29,7 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ question, onAnswer, revealed, correctAnswer, selectedAnswer }: QuestionCardProps) {
+  const { t, isRTL } = useTranslation();
   const [localSelected, setLocalSelected] = useState<string | null>(null);
   const selected = selectedAnswer ?? localSelected;
 
@@ -24,14 +42,14 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
   const getOptionStyle = (option: string): React.CSSProperties => {
     const base: React.CSSProperties = {
       width: '100%',
-      padding: '14px 20px',
-      borderRadius: theme.borderRadius.md,
+      padding: '12px 18px',
+      borderRadius: '50px',
       border: '2px solid #E8E8F0',
       fontSize: '16px',
       fontFamily: theme.fonts.body,
       fontWeight: 700,
       cursor: revealed || selected ? 'default' : 'pointer',
-      textAlign: 'left',
+      textAlign: isRTL ? 'right' : 'left',
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
@@ -82,9 +100,9 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
         style={{
           background: theme.colors.white,
           borderRadius: theme.borderRadius.lg,
-          padding: '24px',
+          padding: '20px',
           boxShadow: theme.shadows.card,
-          marginBottom: '20px',
+          marginBottom: '16px',
         }}
       >
         <div
@@ -93,6 +111,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
             alignItems: 'center',
             gap: '8px',
             marginBottom: '4px',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
           }}
         >
           <span style={{ fontSize: '14px' }}>
@@ -108,7 +127,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
               letterSpacing: '1px',
             }}
           >
-            {question.subject}
+            {t(SUBJECT_TRANSLATION_KEYS[question.subject as Subject])}
           </span>
         </div>
         <p
@@ -129,7 +148,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
         {question.options.map((option, i) => (
           <motion.button
             key={option}
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1, duration: 0.3 }}
             whileHover={!revealed && !selected ? { scale: 1.02 } : {}}
@@ -180,35 +199,6 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
         ))}
       </div>
 
-      <AnimatePresence>
-        {revealed && question.explanation && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            style={{
-              marginTop: '16px',
-              padding: '16px',
-              background: 'rgba(255,255,255,0.9)',
-              borderRadius: theme.borderRadius.md,
-              backdropFilter: 'blur(5px)',
-            }}
-          >
-            <p
-              style={{
-                fontFamily: theme.fonts.body,
-                fontWeight: 600,
-                fontSize: '14px',
-                color: theme.colors.darkText,
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              💡 {question.explanation}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

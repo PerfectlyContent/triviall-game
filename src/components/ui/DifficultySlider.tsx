@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n';
 import { theme } from '../../utils/theme';
 
 interface DifficultySliderProps {
@@ -7,10 +8,11 @@ interface DifficultySliderProps {
 }
 
 export function DifficultySlider({ value, onChange, label = true }: DifficultySliderProps) {
+  const { t } = useTranslation();
   const getLabel = () => {
-    if (value <= 3) return 'Easy';
-    if (value <= 6) return 'Medium';
-    return 'Hard';
+    if (value <= 3) return t('difficulty.easy');
+    if (value <= 6) return t('difficulty.medium');
+    return t('difficulty.hard');
   };
 
   const getColor = () => {
@@ -38,7 +40,7 @@ export function DifficultySlider({ value, onChange, label = true }: DifficultySl
               color: theme.colors.darkText,
             }}
           >
-            Difficulty
+            {t('difficulty.label')}
           </span>
           <span
             style={{

@@ -6,19 +6,40 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmojiPicker } from '../components/ui/EmojiPicker';
 import { DifficultySlider } from '../components/ui/DifficultySlider';
+import { useTranslation } from '../i18n';
+import { useLanguage } from '../App';
 import { theme } from '../utils/theme';
 import type { AgeGroup, GameMode, Subject, GameSettings } from '../types';
 import { ALL_SUBJECTS } from '../types';
+import type { TranslationKey } from '../i18n/translations';
 
-const STEPS = ['Profile', 'Mode', 'Subjects', 'Settings'];
+const STEP_KEYS: TranslationKey[] = ['setup.profile', 'setup.mode', 'setup.subjects', 'setup.settings'];
+
+const SUBJECT_TRANSLATION_KEYS: Record<Subject, TranslationKey> = {
+  'Science': 'subject.Science',
+  'History': 'subject.History',
+  'Gaming': 'subject.Gaming',
+  'Movies': 'subject.Movies',
+  'Music': 'subject.Music',
+  'Sports': 'subject.Sports',
+  'Nature': 'subject.Nature',
+  'Food': 'subject.Food',
+  'Travel': 'subject.Travel',
+  'Pop Culture': 'subject.PopCulture',
+  'Art': 'subject.Art',
+  'Tech': 'subject.Tech',
+};
 
 export function GameSetup() {
   const navigate = useNavigate();
   const { actions } = useGame();
+  const { t, isRTL } = useTranslation();
+  const { language } = useLanguage();
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [age, setAge] = useState<AgeGroup>('adult');
+  const [kidAge, setKidAge] = useState<number>(8);
   const [avatar, setAvatar] = useState('😀');
   const [mode, setMode] = useState<GameMode>('local');
   const [subjects, setSubjects] = useState<Subject[]>([...ALL_SUBJECTS]);
@@ -32,7 +53,7 @@ export function GameSetup() {
   };
 
   const handleNext = () => {
-    if (step < STEPS.length - 1) {
+    if (step < STEP_KEYS.length - 1) {
       setStep(step + 1);
     }
   };
@@ -48,8 +69,9 @@ export function GameSetup() {
       subjects,
       rounds,
       defaultDifficulty: difficulty,
+      language,
     };
-    await actions.createGame({ name: name.trim(), age, avatarEmoji: avatar }, settings);
+    await actions.createGame({ name: name.trim(), age, kidAge: age === 'kid' ? kidAge : null, avatarEmoji: avatar }, settings);
     navigate('/lobby');
   };
 
@@ -65,9 +87,9 @@ export function GameSetup() {
   };
 
   const slideVariants = {
-    enter: { x: 100, opacity: 0 },
+    enter: { x: isRTL ? -100 : 100, opacity: 0 },
     center: { x: 0, opacity: 1 },
-    exit: { x: -100, opacity: 0 },
+    exit: { x: isRTL ? 100 : -100, opacity: 0 },
   };
 
   return (
@@ -106,7 +128,7 @@ export function GameSetup() {
             justifyContent: 'center',
           }}
         >
-          ←
+          {isRTL ? '→' : '←'}
         </motion.button>
         <h2
           style={{
@@ -117,7 +139,7 @@ export function GameSetup() {
             flex: 1,
           }}
         >
-          {STEPS[step]}
+          {t(STEP_KEYS[step])}
         </h2>
         <span
           style={{
@@ -127,13 +149,13 @@ export function GameSetup() {
             color: 'rgba(255,255,255,0.6)',
           }}
         >
-          {step + 1}/{STEPS.length}
+          {step + 1}/{STEP_KEYS.length}
         </span>
       </div>
 
       {/* Step indicators */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
-        {STEPS.map((_, i) => (
+        {STEP_KEYS.map((_, i) => (
           <div
             key={i}
             style={{
@@ -171,13 +193,13 @@ export function GameSetup() {
                     marginBottom: '8px',
                   }}
                 >
-                  Your Name
+                  {t('setup.yourName')}
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your name"
+                  placeholder={t('setup.enterName')}
                   maxLength={20}
                   style={{
                     width: '100%',
@@ -207,7 +229,7 @@ export function GameSetup() {
                     marginBottom: '8px',
                   }}
                 >
-                  Age Group
+                  {t('setup.ageGroup')}
                 </label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {(['kid', 'adult'] as AgeGroup[]).map((a) => (
@@ -228,11 +250,65 @@ export function GameSetup() {
                         color: theme.colors.darkText,
                       }}
                     >
-                      {a === 'kid' ? '🧒 Kid (6-12)' : '🧑 Adult (13+)'}
+                      {a === 'kid' ? `🧒 ${t('setup.kid')}` : `🧑 ${t('setup.adult')}`}
                     </motion.button>
                   ))}
                 </div>
               </div>
+
+              {/* Kid Age Picker */}
+              <AnimatePresence>
+                {age === 'kid' && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ overflow: 'hidden', marginBottom: '20px' }}
+                  >
+                    <label
+                      style={{
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 700,
+                        fontSize: '14px',
+                        color: theme.colors.darkText,
+                        display: 'block',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      {t('setup.howOld')}
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {[6, 7, 8, 9, 10, 11, 12].map((a) => (
+                        <motion.button
+                          key={a}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => setKidAge(a)}
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: theme.borderRadius.md,
+                            border: kidAge === a
+                              ? `2px solid ${theme.colors.primaryTeal}`
+                              : `2px solid ${theme.colors.lightGray}`,
+                            background: kidAge === a ? `${theme.colors.primaryTeal}15` : theme.colors.white,
+                            cursor: 'pointer',
+                            fontFamily: theme.fonts.display,
+                            fontWeight: 800,
+                            fontSize: '16px',
+                            color: kidAge === a ? theme.colors.primaryTeal : theme.colors.darkText,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {a}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div>
                 <label
@@ -245,7 +321,7 @@ export function GameSetup() {
                     marginBottom: '8px',
                   }}
                 >
-                  Choose Avatar
+                  {t('setup.chooseAvatar')}
                 </label>
                 <EmojiPicker selected={avatar} onSelect={setAvatar} />
               </div>
@@ -256,8 +332,8 @@ export function GameSetup() {
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {[
-                { value: 'local' as GameMode, icon: '📱', title: 'Same Device', desc: 'Pass the phone around - perfect for parties!' },
-                { value: 'online' as GameMode, icon: '🌐', title: 'Different Devices', desc: 'Play online with a room code' },
+                { value: 'local' as GameMode, icon: '📱', titleKey: 'setup.sameDevice' as TranslationKey, descKey: 'setup.sameDeviceDesc' as TranslationKey },
+                { value: 'online' as GameMode, icon: '🌐', titleKey: 'setup.diffDevices' as TranslationKey, descKey: 'setup.diffDevicesDesc' as TranslationKey },
               ].map((opt) => (
                 <Card
                   key={opt.value}
@@ -281,7 +357,7 @@ export function GameSetup() {
                           color: theme.colors.darkText,
                         }}
                       >
-                        {opt.title}
+                        {t(opt.titleKey)}
                       </div>
                       <div
                         style={{
@@ -291,11 +367,11 @@ export function GameSetup() {
                           color: theme.colors.mediumGray,
                         }}
                       >
-                        {opt.desc}
+                        {t(opt.descKey)}
                       </div>
                     </div>
                     {mode === opt.value && (
-                      <span style={{ marginLeft: 'auto', fontSize: '20px', color: theme.colors.primaryTeal }}>
+                      <span style={{ marginInlineStart: 'auto', fontSize: '20px', color: theme.colors.primaryTeal }}>
                         ✓
                       </span>
                     )}
@@ -329,7 +405,7 @@ export function GameSetup() {
                     width: '100%',
                   }}
                 >
-                  {subjects.length === ALL_SUBJECTS.length ? '✓ All Subjects' : 'Select All'}
+                  {subjects.length === ALL_SUBJECTS.length ? `✓ ${t('setup.allSubjects')}` : t('setup.selectAll')}
                 </motion.button>
               </div>
               <div
@@ -366,7 +442,7 @@ export function GameSetup() {
                       }}
                     >
                       <span style={{ fontSize: '24px' }}>{theme.subjectEmojis[s]}</span>
-                      {s}
+                      {t(SUBJECT_TRANSLATION_KEYS[s])}
                     </motion.button>
                   );
                 })}
@@ -388,7 +464,7 @@ export function GameSetup() {
                     marginBottom: '12px',
                   }}
                 >
-                  Number of Rounds
+                  {t('setup.numRounds')}
                 </label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {([3, 5, 10] as const).map((r) => (
@@ -421,7 +497,7 @@ export function GameSetup() {
                           marginTop: '2px',
                         }}
                       >
-                        {r === 3 ? 'Quick' : r === 5 ? 'Classic' : 'Epic'}
+                        {r === 3 ? t('setup.quick') : r === 5 ? t('setup.classic') : t('setup.epic')}
                       </div>
                     </motion.button>
                   ))}
@@ -436,7 +512,7 @@ export function GameSetup() {
 
       {/* Bottom buttons */}
       <div style={{ marginTop: '24px' }}>
-        {step < STEPS.length - 1 ? (
+        {step < STEP_KEYS.length - 1 ? (
           <Button
             variant="primary"
             size="lg"
@@ -444,7 +520,7 @@ export function GameSetup() {
             disabled={!canProceed()}
             onClick={handleNext}
           >
-            Continue
+            {t('setup.continue')}
           </Button>
         ) : (
           <Button
@@ -453,7 +529,7 @@ export function GameSetup() {
             fullWidth
             onClick={handleCreate}
           >
-            🚀 Create Lobby
+            🚀 {t('setup.createLobby')}
           </Button>
         )}
       </div>

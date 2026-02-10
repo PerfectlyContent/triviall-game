@@ -1,5 +1,6 @@
 import { AnimatePresence } from 'framer-motion';
 import type { Player } from '../../types';
+import { useTranslation } from '../../i18n';
 import { PlayerCard } from './PlayerCard';
 import { theme } from '../../utils/theme';
 
@@ -8,6 +9,7 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ players }: LeaderboardProps) {
+  const { t } = useTranslation();
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (
@@ -22,7 +24,7 @@ export function Leaderboard({ players }: LeaderboardProps) {
           textAlign: 'center',
         }}
       >
-        Leaderboard
+        {t('leaderboard.title')}
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <AnimatePresence>
