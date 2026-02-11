@@ -627,28 +627,38 @@ export function Round() {
                   left: -20,
                   right: -20,
                   bottom: -20,
-                  background: 'rgba(0,0,0,0.6)',
+                  background: 'rgba(0,0,0,0.15)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
                   zIndex: 100,
                   borderRadius: theme.borderRadius.lg,
-                  backdropFilter: 'blur(4px)',
                 }}
               >
-                <span style={{ fontSize: '48px', marginBottom: '16px' }}>👀</span>
-                <p
+                <div
                   style={{
-                    fontFamily: theme.fonts.display,
-                    fontWeight: 700,
-                    fontSize: '18px',
-                    color: theme.colors.white,
-                    textAlign: 'center',
+                    background: 'rgba(0,0,0,0.65)',
+                    borderRadius: '50px',
+                    padding: '8px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
                 >
-                  {t('round.isAnswering', { name: currentPlayer.name })}
-                </p>
+                  <span style={{ fontSize: '20px' }}>👀</span>
+                  <p
+                    style={{
+                      fontFamily: theme.fonts.display,
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      color: theme.colors.white,
+                      margin: 0,
+                    }}
+                  >
+                    {t('round.isAnswering', { name: currentPlayer.name })}
+                  </p>
+                </div>
               </div>
             )}
 

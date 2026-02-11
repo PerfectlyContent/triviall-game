@@ -42,7 +42,7 @@ export function GameSetup() {
   const [kidAge, setKidAge] = useState<number>(8);
   const [avatar, setAvatar] = useState('😀');
   const [mode, setMode] = useState<GameMode>('local');
-  const [subjects, setSubjects] = useState<Subject[]>([...ALL_SUBJECTS]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [rounds, setRounds] = useState<3 | 5 | 10>(5);
   const [difficulty, setDifficulty] = useState(5);
 

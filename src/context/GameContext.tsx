@@ -6,6 +6,7 @@ import { createDefaultGameState, createDefaultPlayer } from '../types';
 import { calculatePoints, adjustDifficulty } from '../utils/scoring';
 import { generateQuestion, getFallbackQuestion } from '../services/gemini';
 import { generateRoomCode } from '../utils/roomCode';
+import { resetShownFacts } from '../utils/funFacts';
 import * as db from '../services/supabase';
 
 // Pick a random subject from the game's chosen subjects
@@ -771,6 +772,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       channelRef.current.unsubscribe();
       channelRef.current = null;
     }
+    resetShownFacts();
     dispatch({ type: 'RESET_GAME' });
   }, []);
 
