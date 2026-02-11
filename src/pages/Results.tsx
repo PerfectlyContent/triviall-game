@@ -11,7 +11,7 @@ export function Results() {
   const navigate = useNavigate();
   const { state, actions } = useGame();
   const { game } = state;
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { language } = useLanguage();
 
   const sortedPlayers = [...game.players].sort((a, b) => b.score - a.score);
@@ -135,7 +135,7 @@ export function Results() {
             return (
               <motion.div
                 key={player.id}
-                initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
+                initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.35 + i * 0.1 }}
                 style={{

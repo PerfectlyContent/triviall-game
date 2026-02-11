@@ -15,7 +15,7 @@ export function Lobby() {
   const navigate = useNavigate();
   const { state, actions } = useGame();
   const { game } = state;
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
 
   const [addName, setAddName] = useState('');
   const [addAge, setAddAge] = useState<AgeGroup>('adult');
@@ -91,7 +91,7 @@ export function Lobby() {
             justifyContent: 'center',
           }}
         >
-          {isRTL ? '→' : '←'}
+          ←
         </motion.button>
         <h2
           style={{

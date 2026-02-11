@@ -3,15 +3,14 @@ export type GameStatus = 'lobby' | 'playing' | 'finished';
 export type AgeGroup = 'kid' | 'adult';
 export type QuestionType = 'multiple_choice' | 'true_false' | 'complete_phrase' | 'estimation';
 
-export type Language = 'en' | 'he' | 'ru' | 'de' | 'pl' | 'es';
+export type Language = 'en' | 'ru' | 'de' | 'pl' | 'es';
 
-export const LANGUAGES: { code: Language; nativeName: string; flag: string; rtl: boolean }[] = [
-  { code: 'en', nativeName: 'English', flag: '🇺🇸', rtl: false },
-  { code: 'he', nativeName: 'עברית', flag: '🇮🇱', rtl: true },
-  { code: 'ru', nativeName: 'Русский', flag: '🇷🇺', rtl: false },
-  { code: 'de', nativeName: 'Deutsch', flag: '🇩🇪', rtl: false },
-  { code: 'pl', nativeName: 'Polski', flag: '🇵🇱', rtl: false },
-  { code: 'es', nativeName: 'Español', flag: '🇪🇸', rtl: false },
+export const LANGUAGES: { code: Language; nativeName: string; flag: string }[] = [
+  { code: 'en', nativeName: 'English', flag: '🇺🇸' },
+  { code: 'ru', nativeName: 'Русский', flag: '🇷🇺' },
+  { code: 'de', nativeName: 'Deutsch', flag: '🇩🇪' },
+  { code: 'pl', nativeName: 'Polski', flag: '🇵🇱' },
+  { code: 'es', nativeName: 'Español', flag: '🇪🇸' },
 ];
 
 export type Subject =

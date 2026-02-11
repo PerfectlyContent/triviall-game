@@ -17,7 +17,7 @@ const floatingShapes = [
 
 export function Home() {
   const navigate = useNavigate();
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -56,7 +56,7 @@ export function Home() {
         style={{
           position: 'absolute',
           top: '16px',
-          [isRTL ? 'left' : 'right']: '16px',
+          right: '16px',
           zIndex: 10,
         }}
       >
@@ -90,7 +90,7 @@ export function Home() {
               style={{
                 position: 'absolute',
                 top: '52px',
-                [isRTL ? 'left' : 'right']: '0',
+                right: '0',
                 background: 'rgba(30, 20, 60, 0.95)',
                 borderRadius: '16px',
                 padding: '8px',
@@ -122,8 +122,7 @@ export function Home() {
                     fontWeight: language === lang.code ? 700 : 500,
                     fontSize: '14px',
                     cursor: 'pointer',
-                    textAlign: isRTL ? 'right' : 'left',
-                    direction: lang.rtl ? 'rtl' : 'ltr',
+                    textAlign: 'left',
                   }}
                 >
                   <span style={{ fontSize: '20px' }}>{lang.flag}</span>

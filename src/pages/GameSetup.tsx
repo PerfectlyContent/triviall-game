@@ -33,7 +33,7 @@ const SUBJECT_TRANSLATION_KEYS: Record<Subject, TranslationKey> = {
 export function GameSetup() {
   const navigate = useNavigate();
   const { actions } = useGame();
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { language } = useLanguage();
 
   const [step, setStep] = useState(0);
@@ -87,9 +87,9 @@ export function GameSetup() {
   };
 
   const slideVariants = {
-    enter: { x: isRTL ? -100 : 100, opacity: 0 },
+    enter: { x: 100, opacity: 0 },
     center: { x: 0, opacity: 1 },
-    exit: { x: isRTL ? 100 : -100, opacity: 0 },
+    exit: { x: -100, opacity: 0 },
   };
 
   return (
@@ -128,7 +128,7 @@ export function GameSetup() {
             justifyContent: 'center',
           }}
         >
-          {isRTL ? '→' : '←'}
+          ←
         </motion.button>
         <h2
           style={{

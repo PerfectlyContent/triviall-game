@@ -1,5 +1,5 @@
 // Randomized result feedback — keeps things fresh every round
-// Supports: English, Hebrew, Russian, German, Polish, Spanish
+// Supports: English, Russian, German, Polish, Spanish
 
 import type { Language } from '../types';
 
@@ -19,20 +19,6 @@ const CORRECT_MESSAGES: Record<Language, Msg[]> = {
     { emoji: '🚀', text: 'Unstoppable!' },
     { emoji: '👏', text: 'Well played!' },
     { emoji: '🤯', text: 'Genius!' },
-  ],
-  he: [
-    { emoji: '🎉', text: 'קלעת!' },
-    { emoji: '🧠', text: 'מוח ענק!' },
-    { emoji: '💥', text: 'בום! נכון!' },
-    { emoji: '⚡', text: 'מהיר כברק!' },
-    { emoji: '🔥', text: 'שורף את הכל!' },
-    { emoji: '✨', text: 'מבריק!' },
-    { emoji: '🎯', text: 'בול פגיעה!' },
-    { emoji: '🏆', text: 'תשובת אלופים!' },
-    { emoji: '💪', text: 'קל עליך!' },
-    { emoji: '🚀', text: 'אי אפשר לעצור אותך!' },
-    { emoji: '👏', text: 'כל הכבוד!' },
-    { emoji: '🤯', text: 'גאון!' },
   ],
   ru: [
     { emoji: '🎉', text: 'Точно в цель!' },
@@ -105,18 +91,6 @@ const INCORRECT_MESSAGES: Record<Language, Msg[]> = {
     { emoji: '😵‍💫', text: 'Brain freeze!' },
     { emoji: '🫣', text: "Can't win 'em all!" },
   ],
-  he: [
-    { emoji: '😅', text: 'לא בדיוק!' },
-    { emoji: '💀', text: 'אאוץ\', שאלה קשה!' },
-    { emoji: '🫠', text: 'כמעט!' },
-    { emoji: '😬', text: 'יותר מזל בפעם הבאה!' },
-    { emoji: '🤔', text: 'מכשול קטן...' },
-    { emoji: '😤', text: 'זו היתה קשה!' },
-    { emoji: '🪦', text: 'נגמרה הרצועה!' },
-    { emoji: '🙈', text: 'אופס!' },
-    { emoji: '😵‍💫', text: 'קפאון מוחי!' },
-    { emoji: '🫣', text: 'אי אפשר לנצח תמיד!' },
-  ],
   ru: [
     { emoji: '😅', text: 'Не совсем!' },
     { emoji: '💀', text: 'Ох, крепкий орешек!' },
@@ -176,14 +150,6 @@ const STREAK_MESSAGES: Record<Language, Msg[]> = {
     { emoji: '🚀', text: '{n}x streak! To the moon!' },
     { emoji: '👑', text: '{n} streak! Bow down!' },
   ],
-  he: [
-    { emoji: '🔥', text: 'רצף x{n}! אי אפשר לעצור!' },
-    { emoji: '⚡', text: '{n} ברצף! מצב חיה!' },
-    { emoji: '🌟', text: 'רצף של {n}! אתה כוכב!' },
-    { emoji: '💎', text: 'קומבו x{n}! אגדי!' },
-    { emoji: '🚀', text: 'רצף x{n}! עד הירח!' },
-    { emoji: '👑', text: 'רצף של {n}! תכרעו ברך!' },
-  ],
   ru: [
     { emoji: '🔥', text: 'Серия x{n}! Не остановить!' },
     { emoji: '⚡', text: '{n} подряд! Режим зверя!' },
@@ -224,12 +190,6 @@ const TIMEOUT_MESSAGES: Record<Language, Msg[]> = {
     { emoji: '🐢', text: 'Too slow!' },
     { emoji: '⌛', text: 'Clock ran out!' },
     { emoji: '😴', text: 'Fell asleep?' },
-  ],
-  he: [
-    { emoji: '⏰', text: 'נגמר הזמן!' },
-    { emoji: '🐢', text: 'לאט מדי!' },
-    { emoji: '⌛', text: 'השעון אזל!' },
-    { emoji: '😴', text: 'נרדמת?' },
   ],
   ru: [
     { emoji: '⏰', text: 'Время вышло!' },

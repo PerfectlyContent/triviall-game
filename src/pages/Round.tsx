@@ -30,7 +30,7 @@ export function Round() {
   const navigate = useNavigate();
   const { state, actions } = useGame();
   const { game } = state;
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { language } = useLanguage();
 
   const [phase, setPhase] = useState<Phase>('loading');
@@ -848,7 +848,7 @@ export function Round() {
                       boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                     }}
                   >
-                    {actions.isGameOver() ? `🏆 ${t('round.seeResults')}` : `${t('round.continue')} ${isRTL ? '←' : '→'}`}
+                    {actions.isGameOver() ? `🏆 ${t('round.seeResults')}` : `${t('round.continue')} →`}
                   </motion.button>
                 )}
               </motion.div>

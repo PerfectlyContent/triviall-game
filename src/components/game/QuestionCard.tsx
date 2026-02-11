@@ -29,7 +29,7 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ question, onAnswer, revealed, correctAnswer, selectedAnswer }: QuestionCardProps) {
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const [localSelected, setLocalSelected] = useState<string | null>(null);
   const selected = selectedAnswer ?? localSelected;
 
@@ -49,7 +49,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
       fontFamily: theme.fonts.body,
       fontWeight: 700,
       cursor: revealed || selected ? 'default' : 'pointer',
-      textAlign: isRTL ? 'right' : 'left',
+      textAlign: 'left',
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
@@ -111,7 +111,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
             alignItems: 'center',
             gap: '8px',
             marginBottom: '4px',
-            flexDirection: isRTL ? 'row-reverse' : 'row',
+            flexDirection: 'row',
           }}
         >
           <span style={{ fontSize: '14px' }}>
@@ -148,7 +148,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
         {question.options.map((option, i) => (
           <motion.button
             key={option}
-            initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1, duration: 0.3 }}
             whileHover={!revealed && !selected ? { scale: 1.02 } : {}}

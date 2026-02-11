@@ -17,11 +17,11 @@ interface GenerateQuestionParams {
 }
 
 const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English', he: 'Hebrew', ru: 'Russian', de: 'German', pl: 'Polish', es: 'Spanish',
+  en: 'English', ru: 'Russian', de: 'German', pl: 'Polish', es: 'Spanish',
 };
 
 const TRUE_FALSE_LABELS: Record<string, [string, string]> = {
-  en: ['True', 'False'], he: ['נכון', 'לא נכון'], ru: ['Верно', 'Неверно'],
+  en: ['True', 'False'], ru: ['Верно', 'Неверно'],
   de: ['Wahr', 'Falsch'], pl: ['Prawda', 'Fałsz'], es: ['Verdadero', 'Falso'],
 };
 

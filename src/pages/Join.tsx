@@ -12,7 +12,7 @@ import type { AgeGroup } from '../types';
 export function Join() {
   const navigate = useNavigate();
   const { actions, state } = useGame();
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
 
   const [roomCode, setRoomCode] = useState(['', '', '', '']);
   const [name, setName] = useState('');
@@ -98,7 +98,7 @@ export function Join() {
             justifyContent: 'center',
           }}
         >
-          {isRTL ? '→' : '←'}
+          ←
         </motion.button>
         <h2
           style={{
