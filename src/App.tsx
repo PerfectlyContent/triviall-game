@@ -1,5 +1,6 @@
 import { useState, createContext, useContext, useCallback } from 'react';
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router';
+import { motion } from 'framer-motion';
 import { GameProvider } from './context/GameContext';
 import { I18nProvider } from './i18n';
 import { Home } from './pages/Home';
@@ -18,12 +19,23 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue>({
   language: 'en',
-  setLanguage: () => {},
+  setLanguage: () => { },
 });
 
 export function useLanguage() {
   return useContext(LanguageContext);
 }
+
+// --- floating particles ---
+const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  size: Math.random() * 6 + 2,
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  duration: Math.random() * 4 + 4,
+  delay: Math.random() * 3,
+  opacity: Math.random() * 0.5 + 0.15,
+}));
 
 function GameLayout() {
   const [language, setLanguage] = useState<Language>('en');
@@ -38,11 +50,41 @@ function GameLayout() {
               maxWidth: '430px',
               margin: '0 auto',
               minHeight: '100vh',
+              background: 'linear-gradient(180deg, #4A9AE8 0%, #3578D8 35%, #2B62C4 65%, #1E4FA8 100%)',
               position: 'relative',
               overflow: 'hidden',
-              boxShadow: '0 0 40px rgba(0,0,0,0.3)',
+              boxShadow: '0 0 50px rgba(0,0,0,0.5)',
             }}
           >
+            {/* ── Background particles ── */}
+            {PARTICLES.map((p) => (
+              <motion.div
+                key={p.id}
+                animate={{
+                  y: [0, -30, 0],
+                  x: [0, Math.random() > 0.5 ? 10 : -10, 0],
+                  opacity: [p.opacity, p.opacity * 1.5, p.opacity],
+                }}
+                transition={{
+                  duration: p.duration,
+                  repeat: Infinity,
+                  delay: p.delay,
+                  ease: 'easeInOut',
+                }}
+                style={{
+                  position: 'absolute',
+                  width: p.size,
+                  height: p.size,
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.4)',
+                  top: `${p.y}%`,
+                  left: `${p.x}%`,
+                  pointerEvents: 'none',
+                  filter: 'blur(0.5px)',
+                }}
+              />
+            ))}
+
             <Outlet />
           </div>
         </GameProvider>

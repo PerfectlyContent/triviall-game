@@ -96,10 +96,11 @@ export function GameSetup() {
     <div
       style={{
         minHeight: '100vh',
-        background: theme.gradients.purple,
         padding: '20px',
         position: 'relative',
-        overflow: 'hidden',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Header */}
@@ -115,17 +116,20 @@ export function GameSetup() {
           whileTap={{ scale: 0.9 }}
           onClick={handleBack}
           style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: 'none',
+            background: 'rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1.5px solid rgba(255,255,255,0.3)',
             borderRadius: '50%',
-            width: '40px',
-            height: '40px',
+            width: '44px',
+            height: '44px',
             color: theme.colors.white,
             fontSize: '20px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
           }}
         >
           ←
@@ -205,16 +209,23 @@ export function GameSetup() {
                     width: '100%',
                     padding: '14px 16px',
                     borderRadius: theme.borderRadius.md,
-                    border: `2px solid ${theme.colors.lightGray}`,
+                    border: '2px solid rgba(0,0,0,0.1)',
+                    background: 'rgba(255,255,255,0.5)',
                     fontSize: '16px',
                     fontFamily: theme.fonts.body,
                     fontWeight: 600,
                     outline: 'none',
-                    transition: 'border-color 0.2s',
+                    transition: 'border-color 0.2s, background 0.2s',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = theme.colors.primaryTeal)}
-                  onBlur={(e) => (e.target.style.borderColor = theme.colors.lightGray)}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.colors.primaryTeal;
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'rgba(0,0,0,0.1)';
+                    e.target.style.background = 'rgba(255,255,255,0.5)';
+                  }}
                 />
               </div>
 
@@ -511,7 +522,7 @@ export function GameSetup() {
       </AnimatePresence>
 
       {/* Bottom buttons */}
-      <div style={{ marginTop: '24px' }}>
+      <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
         {step < STEP_KEYS.length - 1 ? (
           <Button
             variant="primary"

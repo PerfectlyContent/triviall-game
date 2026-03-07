@@ -87,7 +87,7 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
       };
     }
 
-    return { ...base, background: theme.colors.white, color: theme.colors.darkText };
+    return { ...base, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)', color: theme.colors.darkText };
   };
 
   const optionLabels = ['A', 'B', 'C', 'D'];
@@ -98,11 +98,13 @@ export function QuestionCard({ question, onAnswer, revealed, correctAnswer, sele
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         style={{
-          background: theme.colors.white,
-          borderRadius: theme.borderRadius.lg,
-          padding: '20px',
-          boxShadow: theme.shadows.card,
-          marginBottom: '16px',
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '24px',
+          padding: '24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
+          marginBottom: '20px',
         }}
       >
         <div

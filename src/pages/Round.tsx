@@ -260,12 +260,6 @@ export function Round() {
   // ============================
   // RENDERING
   // ============================
-  const getBackgroundGradient = () => {
-    if (game.currentQuestion) {
-      return theme.subjectGradients[game.currentQuestion.subject] || theme.gradients.teal;
-    }
-    return theme.gradients.teal;
-  };
 
   // Redirect if no current player (use useEffect to avoid setState-during-render)
   useEffect(() => {
@@ -288,10 +282,11 @@ export function Round() {
     <div
       style={{
         minHeight: '100vh',
-        background: getBackgroundGradient(),
         padding: '16px',
         position: 'relative',
-        transition: 'background 0.5s ease',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Top Bar: Round + Player Turn + Subject — single compact row */}
@@ -439,12 +434,14 @@ export function Round() {
                 transition={{ duration: 0.5, ease: 'easeOut' }}
                 style={{
                   background: 'rgba(255,255,255,0.95)',
-                  borderRadius: theme.borderRadius.lg,
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: '24px',
                   padding: '24px 24px 20px',
                   maxWidth: '360px',
                   width: '100%',
                   textAlign: 'center',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
                 }}
               >
                 <div
@@ -584,10 +581,12 @@ export function Round() {
                 transition={{ delay: 0.4, duration: 0.4 }}
                 style={{
                   background: 'rgba(255,255,255,0.95)',
-                  borderRadius: theme.borderRadius.lg,
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: '24px',
                   padding: '20px 32px',
                   textAlign: 'center',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
                 }}
               >
                 <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>

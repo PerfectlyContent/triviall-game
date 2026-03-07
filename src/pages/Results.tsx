@@ -41,13 +41,12 @@ export function Results() {
     <div
       style={{
         minHeight: '100vh',
-        background: theme.gradients.purple,
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         position: 'relative',
-        overflow: 'hidden',
+        zIndex: 10,
       }}
     >
       <Confetti />
@@ -119,12 +118,14 @@ export function Results() {
           transition={{ delay: 0.3 }}
           style={{
             background: 'rgba(255,255,255,0.95)',
-            borderRadius: theme.borderRadius.lg,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderRadius: '24px',
             padding: '4px 0',
             marginBottom: '16px',
             position: 'relative',
             zIndex: 1,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
           }}
         >
           {sortedPlayers.slice(1).map((player, i) => {

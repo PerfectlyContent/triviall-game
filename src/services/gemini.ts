@@ -87,6 +87,7 @@ Respond with valid JSON only matching this exact schema:
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
+      temperature: 0.9,
     },
   });
 
@@ -111,39 +112,63 @@ const FALLBACK_QUESTIONS: Record<string, Question[]> = {
   Science: [
     { id: 'fb1', text: 'Which planet is the Red Planet?', type: 'multiple_choice', options: ['Venus', 'Mars', 'Jupiter', 'Saturn'], correctAnswer: 'Mars', explanation: 'Iron oxide gives Mars its red color.', subject: 'Science', difficulty: 3, timeLimit: 20 },
     { id: 'fb2', text: 'Water contains oxygen.', type: 'true_false', options: ['True', 'False'], correctAnswer: 'True', explanation: 'H2O = two hydrogen atoms + one oxygen.', subject: 'Science', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_sci_3', text: 'What is the hardest natural substance?', type: 'multiple_choice', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], correctAnswer: 'Diamond', explanation: 'Diamonds are made of pure carbon under high pressure.', subject: 'Science', difficulty: 4, timeLimit: 20 },
+    { id: 'fb_sci_4', text: 'Humans have 4 hearts.', type: 'true_false', options: ['True', 'False'], correctAnswer: 'False', explanation: 'Humans only have one heart.', subject: 'Science', difficulty: 1, timeLimit: 20 },
   ],
   History: [
     { id: 'fb3', text: 'When did WWII end?', type: 'multiple_choice', options: ['1943', '1944', '1945', '1946'], correctAnswer: '1945', explanation: 'Japan surrendered in 1945.', subject: 'History', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_his_2', text: 'Who was the first US President?', type: 'multiple_choice', options: ['Lincoln', 'Washington', 'Jefferson', 'Adams'], correctAnswer: 'Washington', explanation: 'George Washington was the first.', subject: 'History', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_his_3', text: 'The Titanic sank in what year?', type: 'multiple_choice', options: ['1905', '1912', '1920', '1931'], correctAnswer: '1912', explanation: 'It sank on its maiden voyage in 1912.', subject: 'History', difficulty: 4, timeLimit: 20 },
   ],
   Nature: [
     { id: 'fb4', text: 'Largest mammal on Earth?', type: 'multiple_choice', options: ['Elephant', 'Blue Whale', 'Giraffe', 'Polar Bear'], correctAnswer: 'Blue Whale', explanation: 'Blue whales can reach 100 feet long.', subject: 'Nature', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_nat_2', text: 'What is the fastest land animal?', type: 'multiple_choice', options: ['Lion', 'Cheetah', 'Horse', 'Greyhound'], correctAnswer: 'Cheetah', explanation: 'Cheetahs can run up to 70 mph.', subject: 'Nature', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_nat_3', text: 'Spiders are insects.', type: 'true_false', options: ['True', 'False'], correctAnswer: 'False', explanation: 'Spiders are arachnids, not insects.', subject: 'Nature', difficulty: 2, timeLimit: 20 },
   ],
   Gaming: [
     { id: 'fb5', text: 'Mario Bros. arcade release year?', type: 'multiple_choice', options: ['1981', '1983', '1985', '1987'], correctAnswer: '1983', explanation: 'The arcade original dropped in 1983.', subject: 'Gaming', difficulty: 5, timeLimit: 20 },
+    { id: 'fb_gam_2', text: 'Best-selling console of all time?', type: 'multiple_choice', options: ['PS2', 'Wii', 'Nintendo DS', 'Xbox 360'], correctAnswer: 'PS2', explanation: 'The PlayStation 2 sold over 155 million units.', subject: 'Gaming', difficulty: 5, timeLimit: 20 },
+    { id: 'fb_gam_3', text: 'What game features Master Chief?', type: 'multiple_choice', options: ['Doom', 'Halo', 'Destiny', 'Gears of War'], correctAnswer: 'Halo', explanation: 'Master Chief is the iconic Spartan of Halo.', subject: 'Gaming', difficulty: 2, timeLimit: 20 },
   ],
   Movies: [
     { id: 'fb6', text: '"I\'ll be back" — which film?', type: 'multiple_choice', options: ['Robocop', 'The Terminator', 'Predator', 'Total Recall'], correctAnswer: 'The Terminator', explanation: 'Schwarzenegger\'s iconic line from 1984.', subject: 'Movies', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_mov_2', text: 'Who directed Jurassic Park?', type: 'multiple_choice', options: ['Spielberg', 'Lucas', 'Cameron', 'Nolan'], correctAnswer: 'Spielberg', explanation: 'Steven Spielberg directed the 1993 classic.', subject: 'Movies', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_mov_3', text: 'First rule of Fight Club?', type: 'multiple_choice', options: ['Win', 'Do not talk about it', 'No shirts', 'Fight to the end'], correctAnswer: 'Do not talk about it', explanation: 'You do NOT talk about Fight Club.', subject: 'Movies', difficulty: 3, timeLimit: 20 },
   ],
   Music: [
     { id: 'fb7', text: 'Strings on a standard guitar?', type: 'multiple_choice', options: ['4', '5', '6', '8'], correctAnswer: '6', explanation: 'Six strings: E-A-D-G-B-E.', subject: 'Music', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_mus_2', text: 'Who is the King of Pop?', type: 'multiple_choice', options: ['Prince', 'Michael Jackson', 'Elvis', 'Bowie'], correctAnswer: 'Michael Jackson', explanation: 'MJ is globally known as the King of Pop.', subject: 'Music', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_mus_3', text: 'How many keys on a standard piano?', type: 'multiple_choice', options: ['66', '77', '88', '99'], correctAnswer: '88', explanation: 'A standard piano has 88 keys.', subject: 'Music', difficulty: 4, timeLimit: 20 },
   ],
   Sports: [
     { id: 'fb8', text: 'Players on a soccer team?', type: 'multiple_choice', options: ['9', '10', '11', '12'], correctAnswer: '11', explanation: '11 per side, including the keeper.', subject: 'Sports', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_spo_2', text: 'A marathon is how many miles?', type: 'multiple_choice', options: ['13.1', '20', '26.2', '30'], correctAnswer: '26.2', explanation: 'A full marathon is officially 26.2 miles.', subject: 'Sports', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_spo_3', text: 'In tennis, what score means zero?', type: 'multiple_choice', options: ['Nil', 'Love', 'Zip', 'Blank'], correctAnswer: 'Love', explanation: 'Zero is called "Love" in tennis.', subject: 'Sports', difficulty: 3, timeLimit: 20 },
   ],
   Food: [
     { id: 'fb9', text: 'Sushi originated in Japan.', type: 'true_false', options: ['True', 'False'], correctAnswer: 'True', explanation: 'Modern sushi was born in Japan.', subject: 'Food', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_foo_2', text: 'Guacamole is made from?', type: 'multiple_choice', options: ['Tomato', 'Avocado', 'Onion', 'Mango'], correctAnswer: 'Avocado', explanation: 'Mashed avocados are the base for guac.', subject: 'Food', difficulty: 1, timeLimit: 20 },
+    { id: 'fb_foo_3', text: 'Which is a type of pasta?', type: 'multiple_choice', options: ['Risotto', 'Baguette', 'Penne', 'Brioche'], correctAnswer: 'Penne', explanation: 'Penne is a tube-shaped pasta.', subject: 'Food', difficulty: 2, timeLimit: 20 },
   ],
   Travel: [
     { id: 'fb10', text: 'Capital of Australia?', type: 'multiple_choice', options: ['Sydney', 'Melbourne', 'Canberra', 'Brisbane'], correctAnswer: 'Canberra', explanation: 'A compromise pick between Sydney and Melbourne.', subject: 'Travel', difficulty: 4, timeLimit: 20 },
+    { id: 'fb_tra_2', text: 'The Eiffel Tower is in Rome.', type: 'true_false', options: ['True', 'False'], correctAnswer: 'False', explanation: 'It is famously located in Paris, France.', subject: 'Travel', difficulty: 1, timeLimit: 20 },
+    { id: 'fb_tra_3', text: 'Which country has the most Pyramids?', type: 'multiple_choice', options: ['Egypt', 'Sudan', 'Mexico', 'Peru'], correctAnswer: 'Sudan', explanation: 'Sudan has more pyramids than Egypt.', subject: 'Travel', difficulty: 7, timeLimit: 20 },
   ],
   'Pop Culture': [
     { id: 'fb11', text: 'Musical.ly became which app?', type: 'multiple_choice', options: ['Reels', 'TikTok', 'Snapchat', 'Vine'], correctAnswer: 'TikTok', explanation: 'TikTok absorbed Musical.ly in 2018.', subject: 'Pop Culture', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_pop_2', text: 'Harry Potter\'s scar shape?', type: 'multiple_choice', options: ['Star', 'Moon', 'Lightning bolt', 'Circle'], correctAnswer: 'Lightning bolt', explanation: 'A lightning bolt on his forehead.', subject: 'Pop Culture', difficulty: 1, timeLimit: 20 },
+    { id: 'fb_pop_3', text: 'Who is Homer Simpson\'s wife?', type: 'multiple_choice', options: ['Marge', 'Lisa', 'Maggie', 'Patty'], correctAnswer: 'Marge', explanation: 'Marge is the matriarch of the family.', subject: 'Pop Culture', difficulty: 1, timeLimit: 20 },
   ],
   Art: [
     { id: 'fb12', text: 'Who painted the Mona Lisa?', type: 'multiple_choice', options: ['Michelangelo', 'Da Vinci', 'Raphael', 'Donatello'], correctAnswer: 'Da Vinci', explanation: 'Leonardo painted it in the early 1500s.', subject: 'Art', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_art_2', text: 'Vincent van Gogh lost which body part?', type: 'multiple_choice', options: ['Eye', 'Finger', 'Ear', 'Toe'], correctAnswer: 'Ear', explanation: 'He infamously cut off part of his left ear.', subject: 'Art', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_art_3', text: 'Primary colors are Red, Yellow, and...?', type: 'multiple_choice', options: ['Green', 'Blue', 'Purple', 'Orange'], correctAnswer: 'Blue', explanation: 'Red, Yellow, and Blue are primary.', subject: 'Art', difficulty: 2, timeLimit: 20 },
   ],
   Tech: [
     { id: 'fb13', text: 'What does HTML stand for?', type: 'multiple_choice', options: ['Hyper Text Markup Language', 'High Tech Modern Language', 'Hyper Transfer Markup Language', 'Home Tool Markup Language'], correctAnswer: 'Hyper Text Markup Language', explanation: 'The standard language for web pages.', subject: 'Tech', difficulty: 3, timeLimit: 20 },
+    { id: 'fb_tec_2', text: 'Creator of Microsoft?', type: 'multiple_choice', options: ['Steve Jobs', 'Bill Gates', 'Elon Musk', 'Mark Zuckerberg'], correctAnswer: 'Bill Gates', explanation: 'Bill Gates co-founded MS in 1975.', subject: 'Tech', difficulty: 2, timeLimit: 20 },
+    { id: 'fb_tec_3', text: 'What does CPU mean?', type: 'multiple_choice', options: ['Central Process Unit', 'Central Processing Unit', 'Computer Personal Unit', 'Core Processing Unit'], correctAnswer: 'Central Processing Unit', explanation: 'The brain of the computer.', subject: 'Tech', difficulty: 3, timeLimit: 20 },
   ],
 };
 

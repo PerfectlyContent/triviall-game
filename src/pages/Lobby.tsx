@@ -67,9 +67,11 @@ export function Lobby() {
     <div
       style={{
         minHeight: '100vh',
-        background: theme.gradients.teal,
         padding: '20px',
         position: 'relative',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Header */}
@@ -78,17 +80,20 @@ export function Lobby() {
           whileTap={{ scale: 0.9 }}
           onClick={() => { actions.resetGame(); navigate('/'); }}
           style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: 'none',
+            background: 'rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1.5px solid rgba(255,255,255,0.3)',
             borderRadius: '50%',
-            width: '40px',
-            height: '40px',
+            width: '44px',
+            height: '44px',
             color: theme.colors.white,
             fontSize: '20px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
           }}
         >
           ←
@@ -250,12 +255,22 @@ export function Lobby() {
                     width: '100%',
                     padding: '12px 14px',
                     borderRadius: theme.borderRadius.md,
-                    border: `2px solid ${theme.colors.lightGray}`,
+                    border: '2px solid rgba(0,0,0,0.1)',
+                    background: 'rgba(255,255,255,0.5)',
                     fontSize: '15px',
                     fontFamily: theme.fonts.body,
                     fontWeight: 600,
                     outline: 'none',
+                    transition: 'border-color 0.2s, background 0.2s',
                     boxSizing: 'border-box',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.colors.primaryTeal;
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'rgba(0,0,0,0.1)';
+                    e.target.style.background = 'rgba(255,255,255,0.5)';
                   }}
                 />
               </div>
@@ -360,30 +375,36 @@ export function Lobby() {
       )}
 
       {/* Start Button / Ready Toggle */}
-      {isOnline && !iAmHost ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '16px',
-            fontFamily: theme.fonts.body,
-            fontWeight: 700,
-            fontSize: '16px',
-            color: 'rgba(255,255,255,0.7)',
-          }}
-        >
-          {t('lobby.waitingHost')}
-        </div>
-      ) : (
-        <Button
-          variant="coral"
-          size="lg"
-          fullWidth
-          disabled={!canStart}
-          onClick={handleStart}
-        >
-          {canStart ? `🚀 ${t('lobby.startGame')}` : t('lobby.needPlayers')}
-        </Button>
-      )}
+      <div style={{ marginTop: 'auto', paddingTop: '24px' }}>
+        {isOnline && !iAmHost ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '16px',
+              fontFamily: theme.fonts.body,
+              fontWeight: 700,
+              fontSize: '16px',
+              color: 'rgba(255,255,255,0.9)',
+              background: 'rgba(0,0,0,0.2)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+            }}
+          >
+            {t('lobby.waitingHost')}
+          </div>
+        ) : (
+          <Button
+            variant="coral"
+            size="lg"
+            fullWidth
+            disabled={!canStart}
+            onClick={handleStart}
+          >
+            {canStart ? `🚀 ${t('lobby.startGame')}` : t('lobby.needPlayers')}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

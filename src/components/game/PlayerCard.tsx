@@ -25,10 +25,12 @@ export function PlayerCard({ player, isActive = false, showScore = false, showRe
         alignItems: 'center',
         gap: '12px',
         padding: '12px 16px',
-        background: isActive ? `${theme.colors.primaryTeal}15` : theme.colors.white,
+        background: isActive ? `${theme.colors.primaryTeal}25` : 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderRadius: theme.borderRadius.md,
-        border: isActive ? `2px solid ${theme.colors.primaryTeal}` : '2px solid transparent',
-        boxShadow: isActive ? theme.shadows.glow(theme.colors.primaryTeal) : '0 2px 8px rgba(0,0,0,0.06)',
+        border: isActive ? `2px solid ${theme.colors.primaryTeal}` : '2px solid rgba(255,255,255,0.5)',
+        boxShadow: isActive ? theme.shadows.glow(theme.colors.primaryTeal) : '0 4px 12px rgba(0,0,0,0.08)',
         transition: 'all 0.3s ease',
       }}
     >

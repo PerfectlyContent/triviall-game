@@ -15,10 +15,12 @@ export function Card({ children, padding = '24px', animate = true, style, onClic
       <div
         onClick={onClick}
         style={{
-          background: theme.colors.white,
-          borderRadius: theme.borderRadius.lg,
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '24px',
           padding,
-          boxShadow: theme.shadows.card,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
           cursor: onClick ? 'pointer' : 'default',
           ...style,
         }}
@@ -35,10 +37,12 @@ export function Card({ children, padding = '24px', animate = true, style, onClic
       transition={{ duration: 0.4, ease: 'easeOut' as const }}
       onClick={onClick}
       style={{
-        background: theme.colors.white,
-        borderRadius: theme.borderRadius.lg,
+        background: 'rgba(255,255,255,0.95)', // Slightly transparent white
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '24px', // Rounder corners
         padding,
-        boxShadow: theme.shadows.card,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset', // Outer shadow + inner border
         cursor: onClick ? 'pointer' : 'default',
         ...style,
       }}

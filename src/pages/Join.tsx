@@ -73,10 +73,11 @@ export function Join() {
     <div
       style={{
         minHeight: '100vh',
-        background: theme.gradients.teal,
         padding: '20px',
         position: 'relative',
-        overflow: 'hidden',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Header */}
@@ -85,17 +86,20 @@ export function Join() {
           whileTap={{ scale: 0.9 }}
           onClick={() => (step === 'profile' ? setStep('code') : navigate('/'))}
           style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: 'none',
+            background: 'rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1.5px solid rgba(255,255,255,0.3)',
             borderRadius: '50%',
-            width: '40px',
-            height: '40px',
+            width: '44px',
+            height: '44px',
             color: theme.colors.white,
             fontSize: '20px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
           }}
         >
           ←
@@ -155,11 +159,21 @@ export function Join() {
                     fontFamily: theme.fonts.display,
                     fontWeight: 900,
                     borderRadius: theme.borderRadius.md,
-                    border: `2px solid ${char ? theme.colors.primaryTeal : theme.colors.lightGray}`,
+                    border: char ? `2px solid ${theme.colors.primaryTeal}` : '2px solid rgba(0,0,0,0.1)',
+                    background: 'rgba(255,255,255,0.5)',
                     outline: 'none',
                     color: theme.colors.darkText,
                     textTransform: 'uppercase',
-                    transition: 'border-color 0.2s',
+                    transition: 'border-color 0.2s, background 0.2s',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.colors.primaryTeal;
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = char ? theme.colors.primaryTeal : 'rgba(0,0,0,0.1)';
+                    e.target.style.background = 'rgba(255,255,255,0.5)';
                   }}
                 />
               ))}
@@ -221,12 +235,22 @@ export function Join() {
                   width: '100%',
                   padding: '14px 16px',
                   borderRadius: theme.borderRadius.md,
-                  border: `2px solid ${theme.colors.lightGray}`,
+                  border: '2px solid rgba(0,0,0,0.1)',
+                  background: 'rgba(255,255,255,0.5)',
                   fontSize: '16px',
                   fontFamily: theme.fonts.body,
                   fontWeight: 600,
                   outline: 'none',
+                  transition: 'border-color 0.2s, background 0.2s',
                   boxSizing: 'border-box',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = theme.colors.primaryTeal;
+                  e.target.style.background = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(0,0,0,0.1)';
+                  e.target.style.background = 'rgba(255,255,255,0.5)';
                 }}
               />
             </div>
