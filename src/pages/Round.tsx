@@ -281,7 +281,7 @@ export function Round() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100dvh',
         padding: '16px',
         position: 'relative',
         zIndex: 10,
@@ -383,478 +383,480 @@ export function Round() {
       </div>
 
       {/* Main Content — pushed down slightly for breathing room */}
-      <AnimatePresence mode="wait">
-        {/* Loading */}
-        {phase === 'loading' && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '70vh',
-              gap: '0',
-              padding: '0 8px',
-            }}
-          >
-            {/* Big subject emoji with pulse */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', margin: '0 -4px', padding: '0 4px', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+        <AnimatePresence mode="wait">
+          {/* Loading */}
+          {phase === 'loading' && (
             <motion.div
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ fontSize: '64px', marginBottom: '12px' }}
-            >
-              {game.currentRoundSubject ? theme.subjectEmojis[game.currentRoundSubject] : '🧠'}
-            </motion.div>
-
-            {/* Loading message with animated dots */}
-            <p
-              style={{
-                fontFamily: theme.fonts.display,
-                fontWeight: 700,
-                fontSize: '16px',
-                color: theme.colors.white,
-                textAlign: 'center',
-                marginBottom: '32px',
-              }}
-            >
-              {getLoadingMessage()}
-            </p>
-
-            {/* Fun fact card — white frosted glass */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={funFact}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-                style={{
-                  background: 'rgba(255,255,255,0.95)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  borderRadius: '24px',
-                  padding: '24px 24px 20px',
-                  maxWidth: '360px',
-                  width: '100%',
-                  textAlign: 'center',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: theme.gradients.yellow,
-                    borderRadius: '50px',
-                    padding: '4px 14px',
-                    marginBottom: '14px',
-                  }}
-                >
-                  <span style={{ fontSize: '14px' }}>💡</span>
-                  <span
-                    style={{
-                      fontFamily: theme.fonts.display,
-                      fontWeight: 800,
-                      fontSize: '11px',
-                      color: theme.colors.darkText,
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px',
-                    }}
-                  >
-                    {t('round.didYouKnow')}
-                  </span>
-                </div>
-                <p
-                  style={{
-                    fontFamily: theme.fonts.body,
-                    fontWeight: 700,
-                    fontSize: '16px',
-                    color: theme.colors.darkText,
-                    lineHeight: 1.6,
-                    margin: 0,
-                  }}
-                >
-                  {funFact}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Three bouncing dots loader */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: '28px' }}>
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.6)',
-                  }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Turn Intro */}
-        {phase === 'turn-intro' && (
-          <motion.div
-            key="intro"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '70vh',
-              gap: '0',
-            }}
-          >
-            {/* Avatar with glow ring */}
-            <motion.div
-              initial={{ scale: 0, rotate: -20 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              style={{
-                width: '100px',
-                height: '100px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.2)',
-                boxShadow: '0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(255,255,255,0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '56px',
-                marginBottom: '20px',
-              }}
-            >
-              {currentPlayer.avatarEmoji}
-            </motion.div>
-
-            {/* Player name */}
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              style={{
-                fontFamily: theme.fonts.display,
-                fontWeight: 900,
-                fontSize: '32px',
-                color: theme.colors.white,
-                textAlign: 'center',
-                margin: '0 0 6px',
-              }}
-            >
-              {isOnline && isMyTurn ? t('round.yourTurnIntro') : t('round.playerTurn', { name: currentPlayer.name })}
-            </motion.h2>
-
-            {/* Get ready text */}
-            <motion.p
+              key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
+              exit={{ opacity: 0 }}
               style={{
-                fontFamily: theme.fonts.body,
-                fontWeight: 600,
-                fontSize: '15px',
-                color: 'rgba(255,255,255,0.6)',
-                margin: '0 0 28px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '70vh',
+                gap: '0',
+                padding: '0 8px',
               }}
             >
-              {isOnline && !isMyTurn ? t('round.watchWait') : t('round.getReady')}
-            </motion.p>
-
-            {/* Subject card */}
-            {game.currentRoundSubject && (
+              {/* Big subject emoji with pulse */}
               <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.4, duration: 0.4 }}
-                style={{
-                  background: 'rgba(255,255,255,0.95)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  borderRadius: '24px',
-                  padding: '20px 32px',
-                  textAlign: 'center',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
-                }}
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ fontSize: '64px', marginBottom: '12px' }}
               >
-                <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>
-                  {theme.subjectEmojis[game.currentRoundSubject]}
-                </span>
-                <p
-                  style={{
-                    fontFamily: theme.fonts.display,
-                    fontWeight: 800,
-                    fontSize: '18px',
-                    color: theme.colors.darkText,
-                    margin: 0,
-                  }}
-                >
-                  {t(SUBJECT_TRANSLATION_KEYS[game.currentRoundSubject!])}
-                </p>
+                {game.currentRoundSubject ? theme.subjectEmojis[game.currentRoundSubject] : '🧠'}
               </motion.div>
-            )}
-          </motion.div>
-        )}
 
-        {/* Question + Result */}
-        {(phase === 'question' || phase === 'result') && game.currentQuestion && (
-          <motion.div
-            key="question"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            style={{ position: 'relative' }}
-          >
-            {/* Watching overlay for non-answering players */}
-            {isOnline && !isMyTurn && phase === 'question' && (
-              <div
+              {/* Loading message with animated dots */}
+              <p
                 style={{
-                  position: 'absolute',
-                  top: -20,
-                  left: -20,
-                  right: -20,
-                  bottom: -20,
-                  background: 'rgba(0,0,0,0.15)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 100,
-                  borderRadius: theme.borderRadius.lg,
+                  fontFamily: theme.fonts.display,
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  color: theme.colors.white,
+                  textAlign: 'center',
+                  marginBottom: '32px',
                 }}
               >
-                <div
+                {getLoadingMessage()}
+              </p>
+
+              {/* Fun fact card — white frosted glass */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={funFact}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
                   style={{
-                    background: 'rgba(0,0,0,0.65)',
-                    borderRadius: '50px',
-                    padding: '8px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderRadius: '24px',
+                    padding: '24px 24px 20px',
+                    maxWidth: '360px',
+                    width: '100%',
+                    textAlign: 'center',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
                   }}
                 >
-                  <span style={{ fontSize: '20px' }}>👀</span>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: theme.gradients.yellow,
+                      borderRadius: '50px',
+                      padding: '4px 14px',
+                      marginBottom: '14px',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px' }}>💡</span>
+                    <span
+                      style={{
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 800,
+                        fontSize: '11px',
+                        color: theme.colors.darkText,
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                      }}
+                    >
+                      {t('round.didYouKnow')}
+                    </span>
+                  </div>
                   <p
                     style={{
-                      fontFamily: theme.fonts.display,
+                      fontFamily: theme.fonts.body,
                       fontWeight: 700,
-                      fontSize: '14px',
-                      color: theme.colors.white,
+                      fontSize: '16px',
+                      color: theme.colors.darkText,
+                      lineHeight: 1.6,
                       margin: 0,
                     }}
                   >
-                    {t('round.isAnswering', { name: currentPlayer.name })}
+                    {funFact}
                   </p>
-                </div>
-              </div>
-            )}
-
-            {/* Timer bar */}
-            {phase === 'question' && isMyTurn && (
-              <TimerBar
-                duration={game.currentQuestion.timeLimit}
-                onTimeout={handleTimeout}
-                isRunning={timerRunning}
-              />
-            )}
-
-            <QuestionCard
-              question={game.currentQuestion}
-              onAnswer={handleAnswer}
-              revealed={phase === 'result'}
-              correctAnswer={result?.correctAnswer ?? null}
-              selectedAnswer={selectedAnswer}
-            />
-
-            {/* Points animation */}
-            <AnimatePresence>
-              {pointsAnimation && phase === 'result' && (
-                <motion.div
-                  initial={{ opacity: 1, y: 0, scale: 1 }}
-                  animate={{ opacity: 0, y: -60, scale: 1.5 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1.5 }}
-                  style={{
-                    position: 'fixed',
-                    top: '40%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    fontFamily: theme.fonts.display,
-                    fontWeight: 900,
-                    fontSize: '36px',
-                    color: theme.colors.brightYellow,
-                    textShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                    pointerEvents: 'none',
-                    zIndex: 10,
-                  }}
-                >
-                  +{pointsAnimation}
                 </motion.div>
-              )}
-            </AnimatePresence>
+              </AnimatePresence>
 
-            {/* Result feedback */}
-            {phase === 'result' && result && (
+              {/* Three bouncing dots loader */}
+              <div style={{ display: 'flex', gap: '6px', marginTop: '28px' }}>
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.6)',
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Turn Intro */}
+          {phase === 'turn-intro' && (
+            <motion.div
+              key="intro"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '70vh',
+                gap: '0',
+              }}
+            >
+              {/* Avatar with glow ring */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.2)',
+                  boxShadow: '0 0 40px rgba(255,255,255,0.3), 0 0 80px rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '56px',
+                  marginBottom: '20px',
+                }}
+              >
+                {currentPlayer.avatarEmoji}
+              </motion.div>
+
+              {/* Player name */}
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                style={{ marginTop: '16px', textAlign: 'center' }}
+                style={{
+                  fontFamily: theme.fonts.display,
+                  fontWeight: 900,
+                  fontSize: '32px',
+                  color: theme.colors.white,
+                  textAlign: 'center',
+                  margin: '0 0 6px',
+                }}
               >
-                {/* Feedback text — no box, just centered text */}
-                <div style={{ marginBottom: '12px' }}>
-                  <span style={{ fontSize: '28px' }}>
-                    {resultMessage?.emoji ?? (result.isCorrect ? '🎉' : '😅')}
+                {isOnline && isMyTurn ? t('round.yourTurnIntro') : t('round.playerTurn', { name: currentPlayer.name })}
+              </motion.h2>
+
+              {/* Get ready text */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.35 }}
+                style={{
+                  fontFamily: theme.fonts.body,
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  color: 'rgba(255,255,255,0.6)',
+                  margin: '0 0 28px',
+                }}
+              >
+                {isOnline && !isMyTurn ? t('round.watchWait') : t('round.getReady')}
+              </motion.p>
+
+              {/* Subject card */}
+              {game.currentRoundSubject && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  style={{
+                    background: 'rgba(255,255,255,0.95)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderRadius: '24px',
+                    padding: '20px 32px',
+                    textAlign: 'center',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset',
+                  }}
+                >
+                  <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>
+                    {theme.subjectEmojis[game.currentRoundSubject]}
                   </span>
                   <p
                     style={{
                       fontFamily: theme.fonts.display,
                       fontWeight: 800,
                       fontSize: '18px',
-                      color: theme.colors.white,
-                      margin: '4px 0 0',
-                    }}
-                  >
-                    {resultMessage?.text ?? (result.isCorrect ? t('round.correct') : t('round.notQuite'))}
-                  </p>
-                </div>
-
-                {/* Difficulty adjuster — small centered pill */}
-                {isMyTurn && (
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '14px',
-                      padding: '6px 14px',
-                      borderRadius: '50px',
-                      background: 'rgba(255,255,255,0.12)',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: theme.fonts.body,
-                        fontWeight: 600,
-                        fontSize: '11px',
-                        color: 'rgba(255,255,255,0.5)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      {t('round.difficulty')}
-                    </span>
-                    <motion.button
-                      whileTap={{ scale: 0.85 }}
-                      onClick={() => actions.setPlayerDifficulty(currentPlayer.id, currentPlayer.difficulty - 1)}
-                      disabled={currentPlayer.difficulty <= 1}
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        border: 'none',
-                        background: 'rgba(255,255,255,0.2)',
-                        color: theme.colors.white,
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        cursor: currentPlayer.difficulty <= 1 ? 'default' : 'pointer',
-                        opacity: currentPlayer.difficulty <= 1 ? 0.3 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      −
-                    </motion.button>
-                    <span
-                      style={{
-                        fontFamily: theme.fonts.display,
-                        fontWeight: 800,
-                        fontSize: '14px',
-                        color: theme.colors.white,
-                        minWidth: '16px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {currentPlayer.difficulty}
-                    </span>
-                    <motion.button
-                      whileTap={{ scale: 0.85 }}
-                      onClick={() => actions.setPlayerDifficulty(currentPlayer.id, currentPlayer.difficulty + 1)}
-                      disabled={currentPlayer.difficulty >= 10}
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        border: 'none',
-                        background: 'rgba(255,255,255,0.2)',
-                        color: theme.colors.white,
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        cursor: currentPlayer.difficulty >= 10 ? 'default' : 'pointer',
-                        opacity: currentPlayer.difficulty >= 10 ? 0.3 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      +
-                    </motion.button>
-                  </div>
-                )}
-
-                {/* Continue / auto-advance */}
-                {isOnline ? (
-                  <p
-                    style={{
-                      fontFamily: theme.fonts.body,
-                      fontWeight: 600,
-                      fontSize: '13px',
-                      color: 'rgba(255,255,255,0.5)',
+                      color: theme.colors.darkText,
                       margin: 0,
                     }}
                   >
-                    {t('round.nextTurn')}
+                    {t(SUBJECT_TRANSLATION_KEYS[game.currentRoundSubject!])}
                   </p>
-                ) : (
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleContinue}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Question + Result */}
+          {(phase === 'question' || phase === 'result') && game.currentQuestion && (
+            <motion.div
+              key="question"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              style={{ position: 'relative' }}
+            >
+              {/* Watching overlay for non-answering players */}
+              {isOnline && !isMyTurn && phase === 'question' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -20,
+                    left: -20,
+                    right: -20,
+                    bottom: -20,
+                    background: 'rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 100,
+                    borderRadius: theme.borderRadius.lg,
+                  }}
+                >
+                  <div
                     style={{
-                      width: '100%',
-                      padding: '14px',
+                      background: 'rgba(0,0,0,0.65)',
                       borderRadius: '50px',
-                      border: 'none',
-                      background: theme.colors.white,
-                      color: theme.colors.darkText,
-                      fontFamily: theme.fonts.display,
-                      fontWeight: 800,
-                      fontSize: '16px',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      padding: '8px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    {actions.isGameOver() ? `🏆 ${t('round.seeResults')}` : `${t('round.continue')} →`}
-                  </motion.button>
+                    <span style={{ fontSize: '20px' }}>👀</span>
+                    <p
+                      style={{
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 700,
+                        fontSize: '14px',
+                        color: theme.colors.white,
+                        margin: 0,
+                      }}
+                    >
+                      {t('round.isAnswering', { name: currentPlayer.name })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Timer bar */}
+              {phase === 'question' && isMyTurn && (
+                <TimerBar
+                  duration={game.currentQuestion.timeLimit}
+                  onTimeout={handleTimeout}
+                  isRunning={timerRunning}
+                />
+              )}
+
+              <QuestionCard
+                question={game.currentQuestion}
+                onAnswer={handleAnswer}
+                revealed={phase === 'result'}
+                correctAnswer={result?.correctAnswer ?? null}
+                selectedAnswer={selectedAnswer}
+              />
+
+              {/* Points animation */}
+              <AnimatePresence>
+                {pointsAnimation && phase === 'result' && (
+                  <motion.div
+                    initial={{ opacity: 1, y: 0, scale: 1 }}
+                    animate={{ opacity: 0, y: -60, scale: 1.5 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.5 }}
+                    style={{
+                      position: 'fixed',
+                      top: '40%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      fontFamily: theme.fonts.display,
+                      fontWeight: 900,
+                      fontSize: '36px',
+                      color: theme.colors.brightYellow,
+                      textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                    }}
+                  >
+                    +{pointsAnimation}
+                  </motion.div>
                 )}
-              </motion.div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </AnimatePresence>
+
+              {/* Result feedback */}
+              {phase === 'result' && result && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  style={{ marginTop: '16px', textAlign: 'center' }}
+                >
+                  {/* Feedback text — no box, just centered text */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <span style={{ fontSize: '28px' }}>
+                      {resultMessage?.emoji ?? (result.isCorrect ? '🎉' : '😅')}
+                    </span>
+                    <p
+                      style={{
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 800,
+                        fontSize: '18px',
+                        color: theme.colors.white,
+                        margin: '4px 0 0',
+                      }}
+                    >
+                      {resultMessage?.text ?? (result.isCorrect ? t('round.correct') : t('round.notQuite'))}
+                    </p>
+                  </div>
+
+                  {/* Difficulty adjuster — small centered pill */}
+                  {isMyTurn && (
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '14px',
+                        padding: '6px 14px',
+                        borderRadius: '50px',
+                        background: 'rgba(255,255,255,0.12)',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: theme.fonts.body,
+                          fontWeight: 600,
+                          fontSize: '11px',
+                          color: 'rgba(255,255,255,0.5)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                        }}
+                      >
+                        {t('round.difficulty')}
+                      </span>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => actions.setPlayerDifficulty(currentPlayer.id, currentPlayer.difficulty - 1)}
+                        disabled={currentPlayer.difficulty <= 1}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'rgba(255,255,255,0.2)',
+                          color: theme.colors.white,
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          cursor: currentPlayer.difficulty <= 1 ? 'default' : 'pointer',
+                          opacity: currentPlayer.difficulty <= 1 ? 0.3 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        −
+                      </motion.button>
+                      <span
+                        style={{
+                          fontFamily: theme.fonts.display,
+                          fontWeight: 800,
+                          fontSize: '14px',
+                          color: theme.colors.white,
+                          minWidth: '16px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {currentPlayer.difficulty}
+                      </span>
+                      <motion.button
+                        whileTap={{ scale: 0.85 }}
+                        onClick={() => actions.setPlayerDifficulty(currentPlayer.id, currentPlayer.difficulty + 1)}
+                        disabled={currentPlayer.difficulty >= 10}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'rgba(255,255,255,0.2)',
+                          color: theme.colors.white,
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          cursor: currentPlayer.difficulty >= 10 ? 'default' : 'pointer',
+                          opacity: currentPlayer.difficulty >= 10 ? 0.3 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        +
+                      </motion.button>
+                    </div>
+                  )}
+
+                  {/* Continue / auto-advance */}
+                  {isOnline ? (
+                    <p
+                      style={{
+                        fontFamily: theme.fonts.body,
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        color: 'rgba(255,255,255,0.5)',
+                        margin: 0,
+                      }}
+                    >
+                      {t('round.nextTurn')}
+                    </p>
+                  ) : (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleContinue}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: '50px',
+                        border: 'none',
+                        background: theme.colors.white,
+                        color: theme.colors.darkText,
+                        fontFamily: theme.fonts.display,
+                        fontWeight: 800,
+                        fontSize: '16px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      {actions.isGameOver() ? `🏆 ${t('round.seeResults')}` : `${t('round.continue')} →`}
+                    </motion.button>
+                  )}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
