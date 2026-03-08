@@ -24,6 +24,14 @@ export function Auth() {
   const hasOAuthParams = location.search.includes('code=') || location.hash.includes('access_token');
   const [oauthTimedOut, setOauthTimedOut] = useState(false);
 
+  // Debug: log what URL we landed on after OAuth redirect
+  useEffect(() => {
+    console.log('[Auth] URL:', window.location.href);
+    console.log('[Auth] search:', location.search);
+    console.log('[Auth] hash:', location.hash);
+    console.log('[Auth] hasOAuthParams:', hasOAuthParams);
+  }, [location, hasOAuthParams]);
+
   // If already logged in, redirect
   useEffect(() => {
     if (user) {
