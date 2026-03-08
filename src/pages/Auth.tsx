@@ -1,15 +1,17 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
 import { Button } from '../components/ui/Button';
+import { Spinner } from '../components/ui/Spinner';
 
 type AuthMode = 'signin' | 'signup';
 
 export function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp, signInWithGoogle, user } = useAuth();
+  const location = useLocation();
+  const { signIn, signUp, signInWithGoogle, user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,11 +20,42 @@ export function Auth() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Detect OAuth callback params (code for PKCE, or hash tokens for implicit flow)
+  const hasOAuthParams = location.search.includes('code=') || location.hash.includes('access_token');
+  const [oauthTimedOut, setOauthTimedOut] = useState(false);
+
   // If already logged in, redirect
-  if (user) {
-    navigate('/', { replace: true });
-    return null;
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Timeout for OAuth exchange — don't hang forever
+  useEffect(() => {
+    if (hasOAuthParams && !user && !oauthTimedOut) {
+      const timer = setTimeout(() => setOauthTimedOut(true), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasOAuthParams, user, oauthTimedOut]);
+
+  // Show loading while auth is initializing or OAuth code exchange is in progress
+  if (authLoading || (hasOAuthParams && !user && !oauthTimedOut)) {
+    return (
+      <div
+        style={{
+          height: '100dvh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spinner />
+      </div>
+    );
   }
+
+  if (user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
