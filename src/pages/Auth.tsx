@@ -24,13 +24,22 @@ export function Auth() {
   const hasOAuthParams = location.search.includes('code=') || location.hash.includes('access_token');
   const [oauthTimedOut, setOauthTimedOut] = useState(false);
 
-  // Debug: log what URL we landed on after OAuth redirect
+  // Debug: capture the full URL on mount (before any redirects strip params)
+  const [debugUrl] = useState(() => window.location.href);
+  const [debugSearch] = useState(() => window.location.search);
+  const [debugHash] = useState(() => window.location.hash);
+
+  // Check for OAuth error params from Supabase
+  const urlParams = new URLSearchParams(location.search);
+  const oauthError = urlParams.get('error');
+  const oauthErrorDesc = urlParams.get('error_description');
+
+  // Show OAuth error from Supabase redirect
   useEffect(() => {
-    console.log('[Auth] URL:', window.location.href);
-    console.log('[Auth] search:', location.search);
-    console.log('[Auth] hash:', location.hash);
-    console.log('[Auth] hasOAuthParams:', hasOAuthParams);
-  }, [location, hasOAuthParams]);
+    if (oauthError) {
+      setError(`OAuth error: ${oauthError} - ${oauthErrorDesc || 'unknown'}`);
+    }
+  }, [oauthError, oauthErrorDesc]);
 
   // If already logged in, redirect
   useEffect(() => {
@@ -277,6 +286,14 @@ export function Auth() {
             required
             minLength={6}
           />
+
+          {/* Debug: show URL info */}
+          {(debugSearch || debugHash || oauthError) && (
+            <p style={{ fontSize: '10px', color: '#666', wordBreak: 'break-all', margin: '0 0 8px' }}>
+              DEBUG URL: {debugUrl}<br/>
+              {oauthError && <>Error: {oauthError} - {oauthErrorDesc}</>}
+            </p>
+          )}
 
           {error && (
             <motion.p
