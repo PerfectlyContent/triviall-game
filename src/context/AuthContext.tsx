@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../services/supabase';
 import type { UserProfile } from '../types';
@@ -27,7 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const initializedRef = useRef(false);
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -55,56 +54,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || initializedRef.current) {
+    if (!supabase) {
       setLoading(false);
       return;
     }
-    initializedRef.current = true;
 
-    // Handle OAuth code exchange before getSession
-    // This is critical: when Supabase redirects back with ?code=..., we must
-    // exchange it before the router strips the params or redirects away.
-    const initSession = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-
-      if (code) {
-        console.log('[Auth] OAuth code detected, exchanging for session...');
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          console.error('[Auth] Code exchange failed:', exchangeError.message);
+    // Listen for auth changes FIRST — this catches OAuth callback events
+    // (e.g. implicit flow tokens in URL hash) even in React StrictMode.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, s) => {
+        console.log('[Auth] onAuthStateChange:', _event, s?.user?.email);
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          await fetchProfile(s.user.id);
         } else {
-          console.log('[Auth] Code exchange succeeded:', data.session?.user?.email);
+          setProfile(null);
         }
-        // Clean the code from the URL to prevent re-exchange
-        window.history.replaceState({}, '', window.location.pathname);
-      }
+        setLoading(false);
+      },
+    );
 
-      const { data: { session: s }, error } = await supabase.auth.getSession();
-      console.log('[Auth] getSession result:', { user: s?.user?.email, error: error?.message });
+    // Then get initial session (for page refreshes with existing session)
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      console.log('[Auth] getSession:', s?.user?.email);
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
         await fetchProfile(s.user.id);
       }
       setLoading(false);
-    };
-
-    initSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, s) => {
-        console.error('[Auth] onAuthStateChange:', _event, s?.user?.email);
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (s?.user) {
-          fetchProfile(s.user.id);
-        } else {
-          setProfile(null);
-        }
-      },
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
