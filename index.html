@@ -22,6 +22,18 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Debug: capture URL before React loads (remove after fixing OAuth)
+      if (window.location.pathname === '/auth' && (window.location.search || window.location.hash)) {
+        document.title = 'AUTH CALLBACK: ' + window.location.search + ' ' + window.location.hash;
+        sessionStorage.setItem('oauth_debug', window.location.href);
+      }
+      // Also show if we previously captured a callback URL
+      var prev = sessionStorage.getItem('oauth_debug');
+      if (prev) {
+        console.error('[OAuth Debug] Previous callback URL:', prev);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
