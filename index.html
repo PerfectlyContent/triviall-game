@@ -22,6 +22,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Capture URL before React/Supabase SDK can modify it
+      if (window.location.hash || window.location.search) {
+        console.log('[OAuth Diagnostic] Full URL on page load:', window.location.href);
+        console.log('[OAuth Diagnostic] Hash:', window.location.hash);
+        console.log('[OAuth Diagnostic] Search:', window.location.search);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
