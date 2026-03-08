@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase, getProfile } from '../services/supabase';
 import type { UserProfile } from '../types';
@@ -27,7 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const initializedRef = useRef(false);
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -55,37 +54,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase || initializedRef.current) {
+    if (!supabase) {
       setLoading(false);
       return;
     }
-    initializedRef.current = true;
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s }, error }) => {
-      console.error('[Auth] getSession result:', { user: s?.user?.email, error: error?.message });
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        fetchProfile(s.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
+    // Listen for auth changes FIRST — this catches OAuth callback events
+    // (e.g. implicit flow tokens in URL hash) even in React StrictMode.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, s) => {
-        console.error('[Auth] onAuthStateChange:', _event, s?.user?.email);
+      async (_event, s) => {
+        console.log('[Auth] onAuthStateChange:', _event, s?.user?.email);
         setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
-          fetchProfile(s.user.id);
+          await fetchProfile(s.user.id);
         } else {
           setProfile(null);
         }
+        setLoading(false);
       },
     );
+
+    // Then get initial session (for page refreshes with existing session)
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      console.log('[Auth] getSession:', s?.user?.email);
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        await fetchProfile(s.user.id);
+      }
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
@@ -110,7 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return { error: 'Supabase not configured' };
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth` },
     });
     return { error: error?.message ?? null };
   }, []);
