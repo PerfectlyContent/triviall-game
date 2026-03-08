@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { EmojiPicker } from '../components/ui/EmojiPicker';
@@ -50,7 +51,13 @@ export function Join() {
     }
   };
 
+  const { canPlay } = useAuth();
+
   const handleJoin = async () => {
+    if (!canPlay) {
+      navigate('/paywall');
+      return;
+    }
     if (!name.trim()) return;
     setError('');
     try {

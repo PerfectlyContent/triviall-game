@@ -1,4 +1,5 @@
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
+import type { UserProfile, SubscriptionStatus } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -6,6 +7,49 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
+
+// --- Profile ---
+export async function getProfile(userId: string): Promise<UserProfile> {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  if (error) throw error;
+  return data as UserProfile;
+}
+
+export async function incrementGamesPlayed(userId: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.rpc('increment_games_played', { user_id: userId });
+  if (error) {
+    // Fallback: read-then-write if RPC not set up yet
+    const { data } = await supabase
+      .from('profiles')
+      .select('games_played')
+      .eq('id', userId)
+      .single();
+    if (data) {
+      await supabase
+        .from('profiles')
+        .update({ games_played: (data.games_played || 0) + 1 })
+        .eq('id', userId);
+    }
+  }
+}
+
+export async function updateSubscriptionStatus(
+  userId: string,
+  status: SubscriptionStatus,
+): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase
+    .from('profiles')
+    .update({ subscription_status: status })
+    .eq('id', userId);
+  if (error) throw error;
+}
 
 // --- Game CRUD ---
 export async function createGame(game: {

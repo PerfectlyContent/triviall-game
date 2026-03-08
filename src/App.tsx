@@ -1,14 +1,20 @@
 import { useState, createContext, useContext, useCallback } from 'react';
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router';
 import { motion } from 'framer-motion';
+import { AuthProvider } from './context/AuthContext';
 import { GameProvider } from './context/GameContext';
 import { I18nProvider } from './i18n';
+import { AuthGuard } from './components/guards/AuthGuard';
+import { Onboarding } from './pages/Onboarding';
+import { Auth } from './pages/Auth';
 import { Home } from './pages/Home';
 import { GameSetup } from './pages/GameSetup';
 import { Join } from './pages/Join';
 import { Lobby } from './pages/Lobby';
 import { Round } from './pages/Round';
 import { Results } from './pages/Results';
+import { Paywall } from './pages/Paywall';
+import { Account } from './pages/Account';
 import type { Language } from './types';
 
 // Shared language state context — sits above GameProvider so Home page can use it
@@ -37,7 +43,7 @@ const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   opacity: Math.random() * 0.5 + 0.15,
 }));
 
-function GameLayout() {
+function AppShell() {
   const [language, setLanguage] = useState<Language>('en');
   const handleSetLanguage = useCallback((lang: Language) => setLanguage(lang), []);
 
@@ -93,21 +99,61 @@ function GameLayout() {
   );
 }
 
+// Protected route wrapper
+function Protected({ children }: { children: React.ReactNode }) {
+  return <AuthGuard>{children}</AuthGuard>;
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
-    Component: GameLayout,
+    Component: AppShell,
     children: [
-      { index: true, Component: Home },
-      { path: 'setup', Component: GameSetup },
-      { path: 'join', Component: Join },
-      { path: 'lobby', Component: Lobby },
-      { path: 'round', Component: Round },
-      { path: 'results', Component: Results },
+      // Public routes (no auth required)
+      { path: 'onboarding', Component: Onboarding },
+      { path: 'auth', Component: Auth },
+
+      // Protected routes
+      {
+        index: true,
+        element: <Protected><Home /></Protected>,
+      },
+      {
+        path: 'setup',
+        element: <Protected><GameSetup /></Protected>,
+      },
+      {
+        path: 'join',
+        element: <Protected><Join /></Protected>,
+      },
+      {
+        path: 'lobby',
+        element: <Protected><Lobby /></Protected>,
+      },
+      {
+        path: 'round',
+        element: <Protected><Round /></Protected>,
+      },
+      {
+        path: 'results',
+        element: <Protected><Results /></Protected>,
+      },
+      {
+        path: 'paywall',
+        element: <Protected><Paywall /></Protected>,
+      },
+      {
+        path: 'account',
+        element: <Protected><Account /></Protected>,
+      },
     ],
   },
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }
