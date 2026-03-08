@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n';
 import { useLanguage } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { LANGUAGES } from '../types';
 import { theme } from '../utils/theme';
 import { Button } from '../components/ui/Button';
@@ -17,6 +18,7 @@ export function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
+  const { profile, isPro, gamesRemaining, canPlay } = useAuth();
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +47,85 @@ export function Home() {
         padding: '0 24px 32px',
       }}
     >
+
+      {/* ── Account button (top-left) ── */}
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => navigate('/account')}
+        style={{
+          position: 'absolute',
+          top: '16px',
+          left: '16px',
+          background: 'rgba(255,255,255,0.2)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1.5px solid rgba(255,255,255,0.3)',
+          borderRadius: '50%',
+          width: '44px',
+          height: '44px',
+          fontSize: '18px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+          zIndex: 20,
+          color: theme.colors.white,
+          fontFamily: theme.fonts.display,
+          fontWeight: 900,
+        }}
+      >
+        {profile?.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt=""
+            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+          />
+        ) : (
+          (profile?.display_name || 'U').charAt(0).toUpperCase()
+        )}
+      </motion.button>
+
+      {/* ── Free games / Pro badge ── */}
+      {isPro ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: '68px',
+            left: '16px',
+            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+            color: '#1A1A2E',
+            fontFamily: theme.fonts.display,
+            fontWeight: 800,
+            fontSize: '10px',
+            padding: '3px 10px',
+            borderRadius: '12px',
+            letterSpacing: '0.5px',
+            zIndex: 20,
+          }}
+        >
+          PRO
+        </div>
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            top: '68px',
+            left: '16px',
+            background: 'rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(8px)',
+            color: 'rgba(255,255,255,0.9)',
+            fontFamily: theme.fonts.body,
+            fontWeight: 700,
+            fontSize: '11px',
+            padding: '3px 10px',
+            borderRadius: '12px',
+            zIndex: 20,
+          }}
+        >
+          {gamesRemaining > 0 ? `${gamesRemaining} free game${gamesRemaining !== 1 ? 's' : ''} left` : 'No free games left'}
+        </div>
+      )}
 
       {/* ── Ambient radial sweep behind title ── */}
       <div
@@ -368,11 +449,11 @@ export function Home() {
           marginTop: '28px',
         }}
       >
-        <Button variant="coral" size="lg" fullWidth onClick={() => navigate('/setup')}>
+        <Button variant="coral" size="lg" fullWidth onClick={() => navigate(canPlay ? '/setup' : '/paywall')}>
           🎮 {t('home.hostGame')}
         </Button>
 
-        <Button variant="glass" size="lg" fullWidth onClick={() => navigate('/join')}>
+        <Button variant="glass" size="lg" fullWidth onClick={() => navigate(canPlay ? '/join' : '/paywall')}>
           🔗 {t('home.joinGame')}
         </Button>
       </motion.div>

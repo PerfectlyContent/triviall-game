@@ -1,6 +1,9 @@
+import { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
+import { useAuth } from '../context/AuthContext';
+import { incrementGamesPlayed } from '../services/supabase';
 import { Confetti } from '../components/ui/Confetti';
 import { computeAwards } from '../components/game/AwardCard';
 import { useTranslation } from '../i18n';
@@ -13,6 +16,17 @@ export function Results() {
   const { game } = state;
   const { t } = useTranslation();
   const { language } = useLanguage();
+  const { user, refreshProfile } = useAuth();
+  const hasCountedRef = useRef(false);
+
+  // Increment games_played counter when a game finishes
+  useEffect(() => {
+    if (hasCountedRef.current || !user || game.status !== 'finished') return;
+    hasCountedRef.current = true;
+    incrementGamesPlayed(user.id)
+      .then(() => refreshProfile())
+      .catch(() => { /* silently fail — counter will catch up */ });
+  }, [user, game.status, refreshProfile]);
 
   const sortedPlayers = [...game.players].sort((a, b) => b.score - a.score);
   const winner = sortedPlayers[0];

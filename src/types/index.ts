@@ -120,6 +120,18 @@ export function createDefaultPlayer(overrides: Partial<Player> = {}): Player {
   };
 }
 
+export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'past_due';
+
+export interface UserProfile {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  games_played: number;
+  subscription_status: SubscriptionStatus;
+  stripe_customer_id: string | null;
+  created_at: string;
+}
+
 export function createDefaultGameState(): GameState {
   return {
     id: '',
