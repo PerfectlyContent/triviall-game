@@ -61,17 +61,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     initializedRef.current = true;
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s }, error }) => {
-      console.error('[Auth] getSession result:', { user: s?.user?.email, error: error?.message });
+    // Handle OAuth code exchange before getSession
+    // This is critical: when Supabase redirects back with ?code=..., we must
+    // exchange it before the router strips the params or redirects away.
+    const initSession = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+
+      if (code) {
+        console.log('[Auth] OAuth code detected, exchanging for session...');
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) {
+          console.error('[Auth] Code exchange failed:', exchangeError.message);
+        } else {
+          console.log('[Auth] Code exchange succeeded:', data.session?.user?.email);
+        }
+        // Clean the code from the URL to prevent re-exchange
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      const { data: { session: s }, error } = await supabase.auth.getSession();
+      console.log('[Auth] getSession result:', { user: s?.user?.email, error: error?.message });
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        fetchProfile(s.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
+        await fetchProfile(s.user.id);
       }
-    });
+      setLoading(false);
+    };
+
+    initSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -110,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return { error: 'Supabase not configured' };
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth` },
+      options: { redirectTo: window.location.origin },
     });
     return { error: error?.message ?? null };
   }, []);

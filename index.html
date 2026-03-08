@@ -22,18 +22,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Debug: capture URL before React loads on ANY page (remove after fixing OAuth)
-      console.error('[OAuth Debug] Page load URL:', window.location.href);
-      if (window.location.search || window.location.hash) {
-        console.error('[OAuth Debug] HAS PARAMS - search:', window.location.search, 'hash:', window.location.hash);
-        sessionStorage.setItem('oauth_debug', window.location.href);
-      }
-      var prev = sessionStorage.getItem('oauth_debug');
-      if (prev) {
-        console.error('[OAuth Debug] Previous callback URL:', prev);
-      }
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
