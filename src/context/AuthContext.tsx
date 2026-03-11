@@ -59,6 +59,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    let initialized = false;
+    const markReady = () => {
+      if (!initialized) {
+        initialized = true;
+        setLoading(false);
+      }
+    };
+
+    // Safety timeout — if auth never resolves (e.g. stale token refresh
+    // hangs), stop the spinner and let the user proceed / re-login.
+    const timeout = setTimeout(() => {
+      if (!initialized) {
+        console.warn('[Auth] initialization timed out, clearing session');
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        markReady();
+      }
+    }, 5000);
+
     // Listen for auth changes FIRST — this catches OAuth callback events
     // (e.g. implicit flow tokens in URL hash) even in React StrictMode.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -71,22 +91,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
         }
-        setLoading(false);
+        markReady();
       },
     );
 
     // Then get initial session (for page refreshes with existing session)
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      console.log('[Auth] getSession:', s?.user?.email);
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        await fetchProfile(s.user.id);
-      }
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(async ({ data: { session: s } }) => {
+        console.log('[Auth] getSession:', s?.user?.email);
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          await fetchProfile(s.user.id);
+        }
+        markReady();
+      })
+      .catch((err) => {
+        console.error('[Auth] getSession failed:', err);
+        markReady();
+      });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
