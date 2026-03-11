@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { createCheckoutSession } from '../services/stripe';
@@ -17,9 +17,18 @@ const FEATURES = [
 
 export function Paywall() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isPro } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle checkout cancellation redirect from Stripe
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'cancelled') {
+      setError('Checkout was cancelled. You can try again when you\'re ready.');
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // If already pro, redirect to home
   if (isPro) {
