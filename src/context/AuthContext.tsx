@@ -82,12 +82,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes FIRST — this catches OAuth callback events
     // (e.g. implicit flow tokens in URL hash) even in React StrictMode.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
+      (_event, s) => {
         console.log('[Auth] onAuthStateChange:', _event, s?.user?.email);
         setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
-          await fetchProfile(s.user.id);
+          // Fetch profile in background — don't block auth resolution
+          fetchProfile(s.user.id);
         } else {
           setProfile(null);
         }
@@ -97,12 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Then get initial session (for page refreshes with existing session)
     supabase.auth.getSession()
-      .then(async ({ data: { session: s } }) => {
+      .then(({ data: { session: s } }) => {
         console.log('[Auth] getSession:', s?.user?.email);
         setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
-          await fetchProfile(s.user.id);
+          fetchProfile(s.user.id);
         }
         markReady();
       })
