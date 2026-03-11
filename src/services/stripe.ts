@@ -27,6 +27,7 @@ export async function createPortalSession(): Promise<string> {
   });
 
   if (error) throw new Error(error.message || 'Failed to create portal session');
+  if (data?.error) throw new Error(data.error);
   if (!data?.url) throw new Error('No portal URL returned');
 
   return data.url;

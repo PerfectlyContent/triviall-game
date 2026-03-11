@@ -10,6 +10,7 @@ export function Account() {
   const navigate = useNavigate();
   const { user, profile, isPro, gamesRemaining, signOut } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   if (!user || !profile) {
     navigate('/auth', { replace: true });
@@ -18,10 +19,12 @@ export function Account() {
 
   const handleManageSubscription = async () => {
     setPortalLoading(true);
+    setPortalError(null);
     try {
       const url = await createPortalSession();
       window.location.href = url;
-    } catch {
+    } catch (err) {
+      setPortalError(err instanceof Error ? err.message : 'Failed to open subscription portal');
       setPortalLoading(false);
     }
   };
@@ -283,6 +286,20 @@ export function Account() {
           <Button variant="coral" size="md" fullWidth onClick={() => navigate('/paywall')}>
             Upgrade to Pro
           </Button>
+        )}
+        {portalError && (
+          <p
+            style={{
+              fontFamily: theme.fonts.body,
+              fontSize: '13px',
+              color: theme.colors.error,
+              textAlign: 'center',
+              marginTop: '8px',
+              marginBottom: 0,
+            }}
+          >
+            {portalError}
+          </p>
         )}
       </motion.div>
 
