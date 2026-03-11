@@ -1,0 +1,13 @@
+[project]
+id = "gnmwjrndofzcuitasrfe"
+
+# Edge functions handle their own JWT verification via supabase.auth.getUser(),
+# so disable the gateway-level JWT check to avoid double-auth 401 errors.
+[functions.create-checkout-session]
+verify_jwt = false
+
+[functions.create-portal-session]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
