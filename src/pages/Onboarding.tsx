@@ -31,7 +31,7 @@ const SCREENS = [
     subtitle: 'Start with 3 free games on us',
     features: [
       { icon: '🆓', text: '3 free games to try everything' },
-      { icon: '💎', text: 'Unlimited games for just $7.99/mo' },
+      { icon: '💎', text: 'Unlimited games for just $2.99/week' },
       { icon: '🚀', text: 'Cancel anytime, no commitments' },
     ],
   },

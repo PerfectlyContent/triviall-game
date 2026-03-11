@@ -153,7 +153,7 @@ export function Paywall() {
               color: theme.colors.darkText,
             }}
           >
-            $7.99
+            $2.99
           </span>
           <span
             style={{
@@ -163,7 +163,7 @@ export function Paywall() {
               color: theme.colors.mediumGray,
             }}
           >
-            /month
+            /week
           </span>
         </div>
 
