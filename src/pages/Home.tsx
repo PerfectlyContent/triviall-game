@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../i18n';
 import { useLanguage } from '../App';
@@ -16,11 +16,24 @@ const STEPS = [
 
 export function Home() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
-  const { profile, isPro, gamesRemaining, canPlay } = useAuth();
+  const { profile, isPro, gamesRemaining, canPlay, refreshProfile } = useAuth();
   const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Handle checkout success redirect from Stripe
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      setCheckoutSuccess(true);
+      // Remove the query param from the URL
+      setSearchParams({}, { replace: true });
+      // Refresh profile to pick up the new subscription status
+      refreshProfile();
+    }
+  }, [searchParams, setSearchParams, refreshProfile]);
 
   useEffect(() => {
     if (!showLangDropdown) return;
@@ -85,6 +98,37 @@ export function Home() {
           (profile?.display_name || 'U').charAt(0).toUpperCase()
         )}
       </motion.button>
+
+      {/* ── Checkout success banner ── */}
+      <AnimatePresence>
+        {checkoutSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(76, 175, 80, 0.95)',
+              backdropFilter: 'blur(12px)',
+              color: '#fff',
+              fontFamily: theme.fonts.display,
+              fontWeight: 700,
+              fontSize: '14px',
+              padding: '10px 20px',
+              borderRadius: '16px',
+              zIndex: 30,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              cursor: 'pointer',
+            }}
+            onClick={() => setCheckoutSuccess(false)}
+          >
+            Welcome to Pro! 🎉
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Free games / Pro badge ── */}
       {isPro ? (

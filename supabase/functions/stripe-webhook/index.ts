@@ -94,6 +94,9 @@ serve(async (req) => {
         if (!subId) break;
 
         const sub = await stripe.subscriptions.retrieve(subId);
+        const customerId = sub.customer as string;
+
+        // Update subscription record
         await supabase
           .from('subscriptions')
           .update({
@@ -102,6 +105,12 @@ serve(async (req) => {
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           })
           .eq('stripe_subscription_id', subId);
+
+        // Also update profile subscription_status (e.g. past_due → active after successful payment)
+        await supabase
+          .from('profiles')
+          .update({ subscription_status: sub.status === 'active' ? 'active' : 'past_due' })
+          .eq('stripe_customer_id', customerId);
         break;
       }
 
@@ -145,7 +154,7 @@ serve(async (req) => {
 
         await supabase
           .from('subscriptions')
-          .update({ status: 'canceled' })
+          .update({ status: 'cancelled' })
           .eq('stripe_subscription_id', sub.id);
         break;
       }
